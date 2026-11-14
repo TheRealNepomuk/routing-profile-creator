@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex">
+  <title>Share Test</title>
+  <style>
+    body { margin: 0; background: #0a1120; color: #f2f5fb; font: 16px/1.4 -apple-system, system-ui, sans-serif; }
+    main { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+    h1 { font-size: 26px; margin: 0 0 6px; }
+    p.lead { color: rgba(226,233,248,.66); margin: 0 0 18px; }
+    .t { border: 1px solid rgba(255,255,255,.14); border-radius: 18px; padding: 14px; margin: 0 0 12px; background: rgba(150,175,225,.08); }
+    .t h2 { font-size: 16px; margin: 0 0 2px; }
+    .t code { font-size: 13px; color: rgba(226,233,248,.66); word-break: break-all; }
+    button, a.btn { display: block; width: 100%; margin-top: 10px; min-height: 48px; border: 0; border-radius: 999px;
+      background: #ff8f00; color: #1d1205; font: 600 16px -apple-system, system-ui, sans-serif; text-align: center;
+      line-height: 48px; text-decoration: none; cursor: pointer; }
+    .res { margin-top: 8px; font-size: 14px; color: #ffb24a; min-height: 1em; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Share test</h1>
+  <p class="lead">Tap each button and check whether OsmAnd shows up in the share sheet (also under "More"). Note the letter of the ones that work. Cancel the sheet after looking. Profile names in the files are "TEST Share A", "TEST Share B" and so on.</p>
+  <div id="tests"></div>
+</main>
+<script>
+const xml = (id) => `<?xml version="1.0" encoding="utf-8"?>
+<!-- SHARE TEST ${id} from Routing Profile Creator. Do NOT navigate with it. -->
+<osmand_routing_config>
+\t<routingProfile name="TEST Share ${id}" baseProfile="car" restrictionsAware="true" minSpeed="20.0" defaultSpeed="50.0" maxSpeed="90.0" sharpTurn="15" slightTurn="8" roundaboutTurn="5" onewayAware="true">
+\t\t<way attribute="access">
+\t\t\t<select value="1" t="highway" v="primary"/>
+\t\t\t<select value="1" t="highway" v="secondary"/>
+\t\t\t<select value="1" t="highway" v="tertiary"/>
+\t\t\t<select value="1" t="highway" v="residential"/>
+\t\t\t<select value="-1"/>
+\t\t</way>
+\t</routingProfile>
+</osmand_routing_config>
+`;
+
+const hostedUrl = new URL("share-test.xml", location.href).href;
+
+// Each test: id, label, detail, run(resultEl)
+const fileShare = (id, type, name, extra = {}) => async () => {
+  const f = new File([xml(id)], name, type === null ? undefined : { type });
+  const data = { files: [f], ...extra };
+  if (!navigator.canShare) return "navigator.canShare not available";
+  if (!navigator.canShare(data)) return "canShare = false (browser refuses this type)";
+  await navigator.share(data);
+  return "share sheet closed (shared or picked a target)";
+};
+
+const TESTS = [
+  ["A", "application/xml", "current mockup", fileShare("A", "application/xml", "TEST_Share_A.xml")],
+  ["B", "text/xml", "", fileShare("B", "text/xml", "TEST_Share_B.xml")],
+  ["C", "application/octet-stream", "generic binary file", fileShare("C", "application/octet-stream", "TEST_Share_C.xml")],
+  ["D", "no type at all", "empty MIME type", fileShare("D", null, "TEST_Share_D.xml")],
+  ["E", "text/plain", "", fileShare("E", "text/plain", "TEST_Share_E.xml")],
+  ["F", "application/xml + title", "file plus a title in the share data", fileShare("F", "application/xml", "TEST_Share_F.xml", { title: "TEST Share F" })],
+  ["G", "application/x-xml", "older XML type name", fileShare("G", "application/x-xml", "TEST_Share_G.xml")],
+  ["H", "Share the URL of a hosted .xml", hostedUrl, async () => {
+    await navigator.share({ url: hostedUrl });
+    return "share sheet closed";
+  }],
+  ["I", "Fetch hosted .xml, then share as file", "real server response turned into a file (application/xml)", async () => {
+    const blob = await (await fetch(hostedUrl)).blob();
+    const f = new File([blob], "TEST_Share_Hosted.xml", { type: blob.type || "application/xml" });
+    if (!navigator.canShare({ files: [f] })) return "canShare = false (type: " + blob.type + ")";
+    await navigator.share({ files: [f] });
+    return "share sheet closed (server type: " + blob.type + ")";
+  }],
+];
+
+const root = document.getElementById("tests");
+for (const [id, label, detail, run] of TESTS) {
+  const box = document.createElement("section");
+  box.className = "t";
+  box.innerHTML = `<h2>${id}. ${label}</h2>${detail ? `<code>${detail}</code>` : ""}<button type="button">Share ${id}</button><div class="res"></div>`;
+  const res = box.querySelector(".res");
+  box.querySelector("button").addEventListener("click", async () => {
+    res.textContent = "…";
+    try { res.textContent = await run(); }
+    catch (e) { res.textContent = e.name === "AbortError" ? "cancelled" : e.name + ": " + e.message; }
+  });
+  root.appendChild(box);
+}
+
+// J: plain download link to the hosted file (Safari download, no share sheet)
+const j = document.createElement("section");
+j.className = "t";
+j.innerHTML = `<h2>J. Plain link to the hosted .xml</h2><code>opens or downloads directly, no share sheet; see what Safari offers</code><a class="btn" href="share-test.xml">Open J</a>`;
+root.appendChild(j);
+const k = document.createElement("section");
+k.className = "t";
+k.innerHTML = `<h2>K. Download link to the hosted .xml</h2><code>same file with the download attribute</code><a class="btn" href="share-test.xml" download="TEST_Share_K.xml">Download K</a>`;
+root.appendChild(k);
+</script>
+</body>
+</html>

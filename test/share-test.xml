@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SHARE TEST FILE from Routing Profile Creator.
+  Minimal profile for testing share/import only. Do NOT navigate with it.
+-->
+<osmand_routing_config>
+	<routingProfile name="TEST Share Hosted" baseProfile="car" restrictionsAware="true" minSpeed="20.0" defaultSpeed="50.0" maxSpeed="90.0" sharpTurn="15" slightTurn="8" roundaboutTurn="5" onewayAware="true">
+		<way attribute="access">
+			<select value="1" t="highway" v="primary"/>
+			<select value="1" t="highway" v="secondary"/>
+			<select value="1" t="highway" v="tertiary"/>
+			<select value="1" t="highway" v="residential"/>
+			<select value="-1"/>
+		</way>
+	</routingProfile>
+</osmand_routing_config>
