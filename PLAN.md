@@ -3,7 +3,51 @@
 **Status:** draft, updated 2026-11-14
 
 **Name:** Routing Profile Creator — *Custom routing profiles for OsmAnd*
-**Repo:** `routing-profile-creator` (public, GitHub) · **Hosting:** GitHub Pages · **Language:** English
+**Repo:** https://github.com/TheRealNepomuk/routing-profile-creator (public) · **Hosting:** GitHub Pages ·
+**Language:** English
+**Live:** https://therealnepomuk.github.io/routing-profile-creator/ (mockup) ·
+share test page: `/test/share.html` (temporary)
+
+## Where we left off (2026-11-14)
+
+- Mockup is live and the design is approved (dark liquid glass, accent = OsmAnd orange `#ff8f00`).
+  It still generates a minimal **TEST** profile only.
+- **Blocker: getting the file into OsmAnd on iOS easily.** See "iOS import findings" below.
+- **Next step (user, on iPhone):** build and test the "Send to OsmAnd" Shortcut (steps below).
+  If it imports without a restart → user shares the iCloud link, we put it on the site.
+- Then: decide the final iOS flow, update button + instructions sheet, remove `test/`.
+- After that: the real OsmAnd exporter (full upstream car profile as template).
+
+## iOS import findings (tested 2026-11-14, iPhone 17)
+
+| Way | Result |
+|---|---|
+| Web Share API with the file, 9 variants (`application/xml`, `text/xml`, `octet-stream`, no type, `text/plain`, `x-xml`, + title, shared URL, fetched hosted file) | **OsmAnd never appears** in the share sheet (also not under "More"). Most likely OsmAnd has no share extension, only "Open in" document types, which iOS offers for real files only. |
+| Plain download link (K: `<a download>`) → open the download → Share → OsmAnd | **Works**, imports immediately (no confirmation message, that's normal). Too many steps. |
+| Share → Save to Files → *On My iPhone → OsmAnd Maps → routing* | **Works**, but OsmAnd only picks the file up **after a full restart**. |
+| OsmAnd deep link to import from a URL | **Doesn't exist.** `DeepLinkParser.swift` (OsmAnd-iOS) only accepts local `file://` URLs for files. |
+| Existing OsmAnd issue asking for import-by-URL / share extension | **None found** (searched OsmAnd-iOS and OsmAnd, 2026-11-14). Closest: #750 (2021, closed, general import). |
+
+### Idea being tested: iOS Shortcut "Send to OsmAnd"
+
+One-time install via iCloud link; afterwards: Send → share sheet → *Send to OsmAnd* → done.
+It should use "Open in" (immediate import), not Save to Files (needs restart).
+
+Build steps (Shortcuts app):
+1. **+** → name "Send to OsmAnd"
+2. Settings **(i)** → **Show in Share Sheet** on, input types: **Files** only
+3. Action **"Open File"**, input = Shortcut Input, app = **OsmAnd** (existence of this action/app
+   option is unverified)
+4. Test from the mockup: Send → choose the Shortcut → does the profile appear without a restart?
+
+Fallback if "Open File" can't target OsmAnd: Shortcut with **Save File** into the `routing` folder
+(still needs a restart).
+
+### Later
+
+- Draft a feature request for OsmAnd-iOS: import link (e.g. `osmandmaps://import?url=…`) and/or
+  share extension. User decides whether to post it.
+- Test the Web Share API on **Android** (may work directly).
 
 ## Goal
 
@@ -112,7 +156,8 @@ to host and keep working. Revisit only if the form grows a lot.
 
 ## Test plan
 
-- [ ] Share sheet with a `.xml` file on iPhone (Safari) → OsmAnd appears as a target? Import works?
+- [x] Share sheet with a `.xml` file on iPhone (Safari) → OsmAnd appears as a target? **No** (see iOS import findings)
+- [ ] iOS Shortcut "Send to OsmAnd" imports without restart?
 - [ ] Same on Android (Chrome)
 - [ ] Download fallback on both + desktop
 - [ ] Generated file loads in OsmAnd, profile name shows up, toggles appear, a ~200 km route calculates
