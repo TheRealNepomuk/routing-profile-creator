@@ -1,21 +1,22 @@
 // Routing Profile Creator — page logic
-import { PRESETS, turnsFromSlider, turnHint, autoName, fileNameFor } from "./settings.js";
+import { START, OSMAND_DEFAULTS, turnsFromSharp, autoName, fileNameFor } from "./settings.js";
 import { buildOsmandXml, TEMPLATE_URL } from "./exporters/osmand.js";
 
 const $ = (id) => document.getElementById(id);
 
 const el = {
-  maxSpeed: $("maxSpeed"), speedValue: $("speedValue"), turns: $("turns"), turnsHint: $("turnsHint"),
-  lights: $("optLights"), motorroads: $("optMotorroads"), name: $("profileName"),
-  defaultSpeed: $("defaultSpeed"), lightPenalty: $("lightPenalty"),
-  sharp: $("sharpTurn"), slight: $("slightTurn"), round: $("roundaboutTurn"),
+  maxSpeed: $("maxSpeed"), speedValue: $("speedValue"), defaultSpeed: $("defaultSpeed"),
+  turns: $("turns"), turnValue: $("turnValue"), turnDetail: $("turnDetail"),
+  lights: $("lights"), lightValue: $("lightValue"),
+  slight: $("slightTurn"), round: $("roundaboutTurn"),
+  motorroads: $("optMotorroads"), name: $("profileName"),
   download: $("downloadBtn"), status: $("status"),
   sheet: $("sheet"), scrim: $("scrim"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
 };
 
 let template = null;
 let nameEdited = false;
-let vehicle = "motorcycle";
+const vehicle = START.vehicle;
 
 // ---------- settings from the form ----------
 const num = (input, fallback, min = 0, max = 1000) => {
@@ -27,9 +28,9 @@ function readSettings() {
   const s = {
     vehicle,
     maxSpeed: +el.maxSpeed.value,
-    defaultSpeed: num(el.defaultSpeed, 50, 5, 200),
-    turns: { sharp: num(el.sharp, 15, 0, 600), slight: num(el.slight, 8, 0, 600), roundabout: num(el.round, 5, 0, 600) },
-    avoidTrafficLights: { enabled: el.lights.checked, penalty: num(el.lightPenalty, 60, 0, 600) },
+    defaultSpeed: num(el.defaultSpeed, START.defaultSpeed, 5, 200),
+    turns: { sharp: +el.turns.value, slight: num(el.slight, 8, 0, 600), roundabout: num(el.round, 5, 0, 600) },
+    trafficLightCost: +el.lights.value,
     blockMotorroads: { enabled: el.motorroads.checked },
   };
   s.name = el.name.value.trim() || autoName(s);
@@ -42,48 +43,57 @@ function setFill(range) {
   range.style.setProperty("--fill", pct + "%");
 }
 
+function turnText() {
+  return `Sharp turns. Slight turns get ${num(el.slight, 0)} s, roundabouts ${num(el.round, 0)} s.`;
+}
+
 function sync() {
   el.speedValue.textContent = el.maxSpeed.value;
-  setFill(el.maxSpeed);
-  setFill(el.turns);
-  if (!nameEdited) el.name.value = autoName(readSettingsWithoutName());
+  el.turnValue.textContent = el.turns.value;
+  el.lightValue.textContent = el.lights.value;
+  el.turnDetail.textContent = turnText();
+  [el.maxSpeed, el.turns, el.lights].forEach(setFill);
+  if (!nameEdited) {
+    el.name.value = autoName({ vehicle, maxSpeed: +el.maxSpeed.value, blockMotorroads: { enabled: el.motorroads.checked } });
+  }
 }
 
-function readSettingsWithoutName() {
-  return { vehicle, maxSpeed: +el.maxSpeed.value, blockMotorroads: { enabled: el.motorroads.checked } };
-}
-
-function onTurns() {
-  const t = +el.turns.value;
-  const p = turnsFromSlider(t);
-  el.sharp.value = p.sharp; el.slight.value = p.slight; el.round.value = p.roundabout;
-  el.turnsHint.textContent = turnHint(t);
+function onTurnSlider() {
+  const t = turnsFromSharp(+el.turns.value);
+  el.slight.value = t.slight;
+  el.round.value = t.roundabout;
   sync();
 }
 
-function markCustom() {
-  document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-checked", "false"));
+function applyStart() {
+  el.maxSpeed.value = START.maxSpeed;
+  el.defaultSpeed.value = START.defaultSpeed;
+  el.turns.value = START.turns.sharp;
+  el.slight.value = START.turns.slight;
+  el.round.value = START.turns.roundabout;
+  el.lights.value = START.trafficLightCost;
+  el.motorroads.checked = START.blockMotorroads.enabled;
+  sync();
 }
 
-function applyPreset(key) {
-  const p = PRESETS[key];
-  document.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-checked", String(c.dataset.preset === key)));
-  vehicle = p.vehicle;
-  el.maxSpeed.value = p.maxSpeed;
-  el.turns.value = p.turnSlider;
-  el.lights.checked = p.avoidTrafficLights.enabled;
-  el.lightPenalty.value = p.avoidTrafficLights.penalty;
-  el.motorroads.checked = p.blockMotorroads.enabled;
-  el.defaultSpeed.value = p.defaultSpeed;
-  onTurns();
-}
-
-document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => applyPreset(c.dataset.preset)));
-el.maxSpeed.addEventListener("input", () => { markCustom(); sync(); });
-el.turns.addEventListener("input", () => { markCustom(); onTurns(); });
-for (const input of [el.lights, el.motorroads]) input.addEventListener("change", () => { markCustom(); sync(); });
-for (const input of [el.defaultSpeed, el.lightPenalty, el.sharp, el.slight, el.round]) input.addEventListener("input", markCustom);
+el.maxSpeed.addEventListener("input", sync);
+el.turns.addEventListener("input", onTurnSlider);
+el.lights.addEventListener("input", sync);
+el.slight.addEventListener("input", sync);
+el.round.addEventListener("input", sync);
+el.motorroads.addEventListener("change", sync);
 el.name.addEventListener("input", () => { nameEdited = el.name.value.trim() !== ""; });
+
+document.querySelectorAll("[data-reset]").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.reset === "turns") {
+    el.turns.value = OSMAND_DEFAULTS.turns.sharp;
+    el.slight.value = OSMAND_DEFAULTS.turns.slight;
+    el.round.value = OSMAND_DEFAULTS.turns.roundabout;
+  } else if (b.dataset.reset === "lights") {
+    el.lights.value = OSMAND_DEFAULTS.trafficLightCost;
+  }
+  sync();
+}));
 
 // ---------- platform & instructions ----------
 function platform() {
@@ -176,4 +186,4 @@ fetch(TEMPLATE_URL)
   .then((t) => { template = t; el.download.disabled = false; el.status.textContent = ""; })
   .catch(() => { el.status.textContent = "Couldn't load the base profile. Check your connection and reload the page."; });
 
-applyPreset("small");
+applyStart();

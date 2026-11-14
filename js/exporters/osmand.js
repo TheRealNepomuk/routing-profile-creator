@@ -66,20 +66,19 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
     changes.push('new switch "Block motorways and motorroads" (avoid_motorroads)');
   }
 
-  if (s.avoidTrafficLights.enabled) {
-    const sec = Math.max(0, Math.round(s.avoidTrafficLights.penalty));
-    insertAfter(lastChild(profile, "parameter"), el(doc, "parameter", {
-      id: "avoid_traffic_signals", name: "Avoid traffic lights",
-      description: "Strongly prefer routes with fewer traffic lights", type: "boolean",
-    }), "\t\t");
-    // Routing cost only (obstacle). ETA cost (obstacle_time) stays unchanged.
-    const block = ifBlock(doc, "avoid_traffic_signals", [[String(sec), "highway", "traffic_signals"]]);
-    insertBefore(firstElementChild(obstacle), block, "\t\t\t",
-      " Routing Profile Creator: traffic light routing cost in seconds (car default 15) ");
-    changes.push(`new switch "Avoid traffic lights" (avoid_traffic_signals): ${sec} s per light`);
+  // --- 4. traffic light routing cost ---
+  // Routing cost only (<point attribute="obstacle">); the ETA cost (obstacle_time) stays unchanged.
+  // Negative values would make every traffic light impassable in OsmAnd, so clamp at 0.
+  const sec = Math.max(0, Math.round(s.trafficLightCost));
+  const lightRule = elementChildren(obstacle).find((e) =>
+    e.nodeName === "select" && e.getAttribute("t") === "highway" && e.getAttribute("v") === "traffic_signals");
+  if (!lightRule) throw new Error("Template has no traffic light rule");
+  if (lightRule.getAttribute("value") !== String(sec)) {
+    changes.push(`traffic light routing cost (s): ${lightRule.getAttribute("value")} -> ${sec}`);
+    lightRule.setAttribute("value", String(sec));
   }
 
-  // --- 4. header comment ---
+  // --- 5. header comment ---
   const safeName = s.name.replace(/-{2,}/g, "-"); // "--" is not allowed inside XML comments
   const header = doc.createComment(
     `\n  ${safeName}\n  Created with Routing Profile Creator (https://therealnepomuk.github.io/routing-profile-creator/)\n` +

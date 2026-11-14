@@ -31,44 +31,56 @@
     <circle class="map-pin" cx="340" cy="20" r="5"/>
   </svg>
 
-  <header class="top glass">
-    <span class="top-title">Routing Profile Creator</span>
-    <span class="top-sub">for OsmAnd</span>
-  </header>
-
   <main class="page">
     <section class="intro">
       <h1>Make OsmAnd route the way you ride.</h1>
-      <p>Pick your bike, adjust a few things, and send the profile straight to the app.</p>
-    </section>
-
-    <section aria-label="Presets">
-      <div class="presets" role="radiogroup" aria-label="Start from">
-        <button class="chip glass" role="radio" aria-checked="true" data-preset="small">Small motorcycle</button>
-        <button class="chip glass" role="radio" aria-checked="false" data-preset="light">125 cc</button>
-        <button class="chip glass" role="radio" aria-checked="false" data-preset="touring">Touring</button>
-      </div>
+      <p>Set how OsmAnd should plan your routes, then download the profile and add it to the app.</p>
     </section>
 
     <section class="panel glass speed" aria-labelledby="speed-label">
       <div class="panel-head">
-        <h2 id="speed-label">My top speed</h2>
-        <p class="hint">Routes are calculated as if you never go faster than this. Faster roads are still used when they save time.</p>
+        <h2 id="speed-label">Max cruising speed</h2>
+        <p class="hint">The speed you usually want to (or can) cruise at. Routes are planned as if you never go faster. Faster roads still count when they save time.</p>
       </div>
       <output class="speed-readout" for="maxSpeed" aria-live="polite">
         <span id="speedValue">90</span><span class="unit">km/h</span>
       </output>
-      <input class="range" id="maxSpeed" type="range" min="40" max="140" step="5" value="90" aria-label="Top speed in km/h">
+      <input class="range" id="maxSpeed" type="range" min="40" max="140" step="5" value="90" aria-label="Max cruising speed in km/h">
       <div class="range-ends" aria-hidden="true"><span>40</span><span>140</span></div>
+      <label class="inline-field">
+        <span>Speed on roads with no known speed</span>
+        <span class="inline-input"><input class="text num" id="defaultSpeed" type="number" inputmode="numeric" min="5" max="140" value="50"> km/h</span>
+      </label>
     </section>
 
-    <section class="panel glass" aria-labelledby="turns-label">
+    <section class="panel glass" aria-labelledby="time-label">
       <div class="panel-head">
-        <h2 id="turns-label">Turns</h2>
-        <p class="hint" id="turnsHint">Bends cost a little time. Good for most bikes.</p>
+        <h2 id="time-label">Extra time planned</h2>
+        <p class="hint">Seconds the route planner adds for each turn and traffic light. More time means the planner avoids them more.</p>
       </div>
-      <input class="range" id="turns" type="range" min="0" max="100" step="5" value="50" aria-describedby="turnsHint" aria-label="Turn preference">
-      <div class="range-ends"><span>Curvy is fine</span><span>Prefer straight</span></div>
+
+      <div class="sub">
+        <div class="sub-head">
+          <h3 id="turn-label">Per turn</h3>
+          <output class="mini-readout" for="turns"><span id="turnValue">15</span> s</output>
+        </div>
+        <p class="sub-detail" id="turnDetail">sharp turns · slight turns 8 s · roundabouts 5 s</p>
+        <input class="range" id="turns" type="range" min="0" max="60" step="1" value="15" aria-labelledby="turn-label" aria-describedby="turnDetail">
+        <div class="range-ends"><span>0 s</span><span>60 s</span></div>
+        <p class="default-note">OsmAnd default: 30 s <button type="button" class="link-btn" data-reset="turns">Use default</button></p>
+      </div>
+
+      <div class="sub">
+        <div class="sub-head">
+          <h3 id="light-label">Per traffic light</h3>
+          <output class="mini-readout" for="lights"><span id="lightValue">15</span> s</output>
+        </div>
+        <p class="sub-detail" id="lightDetail">Arrival times keep using OsmAnd's normal estimate.</p>
+        <input class="range" id="lights" type="range" min="0" max="180" step="5" value="15" aria-labelledby="light-label" aria-describedby="lightDetail lightLimit">
+        <div class="range-ends"><span>0 s</span><span>180 s</span></div>
+        <p class="default-note">OsmAnd default: 15 s <button type="button" class="link-btn" data-reset="lights">Use default</button></p>
+        <p class="sub-detail" id="lightLimit">0 means traffic lights don't matter. OsmAnd can't prefer them: anything below 0 would block every traffic light.</p>
+      </div>
     </section>
 
     <section class="panel glass" aria-labelledby="avoid-label">
@@ -76,13 +88,6 @@
         <h2 id="avoid-label">Switches in the app</h2>
         <p class="hint">These appear in OsmAnd under Route parameters → Avoid roads. You can turn them on and off per trip.</p>
       </div>
-      <label class="row">
-        <span class="row-text">
-          <span class="row-title">Avoid traffic lights</span>
-          <span class="row-sub">Strongly prefer roads with fewer lights</span>
-        </span>
-        <input class="switch" type="checkbox" id="optLights" checked>
-      </label>
       <label class="row">
         <span class="row-text">
           <span class="row-title">Block motorways and motorroads</span>
@@ -101,14 +106,9 @@
     </section>
 
     <details class="panel glass advanced">
-      <summary>Advanced</summary>
+      <summary>Fine-tune turns</summary>
+      <p class="hint">The turn slider sets sharp turns and scales the others. Override them here.</p>
       <div class="adv-grid">
-        <label class="field"><span>Speed on unknown roads (km/h)</span>
-          <input class="text num" id="defaultSpeed" type="number" inputmode="numeric" min="10" max="140" value="50"></label>
-        <label class="field"><span>Traffic light penalty (seconds)</span>
-          <input class="text num" id="lightPenalty" type="number" inputmode="numeric" min="0" max="600" value="60"></label>
-        <label class="field"><span>Sharp turn (s)</span>
-          <input class="text num" id="sharpTurn" type="number" inputmode="numeric" min="0" max="120" value="15"></label>
         <label class="field"><span>Slight turn (s)</span>
           <input class="text num" id="slightTurn" type="number" inputmode="numeric" min="0" max="120" value="8"></label>
         <label class="field"><span>Roundabout (s)</span>
