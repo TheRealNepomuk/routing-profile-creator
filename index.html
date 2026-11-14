@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a1120">
+  <meta name="color-scheme" content="dark">
+  <title>Routing Profile Creator</title>
+  <meta name="description" content="Create a custom routing profile for OsmAnd on your phone and send it straight to the app.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Night-mode road map behind the glass -->
+  <svg class="map" viewBox="0 0 400 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g class="map-minor">
+      <path d="M-20 120 C 80 140, 140 90, 230 130 S 380 170, 430 140"/>
+      <path d="M-20 300 C 60 280, 120 330, 210 310 S 340 260, 430 290"/>
+      <path d="M-20 520 C 90 500, 150 560, 250 540 S 360 500, 430 530"/>
+      <path d="M-20 700 C 70 720, 160 680, 240 710 S 370 760, 430 730"/>
+      <path d="M60 -20 C 70 120, 30 260, 70 400 S 40 700, 80 920"/>
+      <path d="M300 -20 C 320 140, 280 300, 330 460 S 300 760, 340 920"/>
+      <path d="M180 -20 C 160 90, 200 180, 170 260"/>
+      <path d="M150 600 C 180 680, 140 800, 170 920"/>
+    </g>
+    <g class="map-major">
+      <path d="M-20 420 C 100 380, 200 460, 300 410 S 400 380, 430 400"/>
+      <path d="M230 -20 C 210 160, 260 320, 220 480 S 260 760, 240 920"/>
+    </g>
+    <path class="map-route" d="M70 860 C 90 760, 40 690, 120 620 S 160 520, 240 540 S 330 470, 300 380 S 250 250, 320 160 S 300 60, 340 20"/>
+    <circle class="map-pin" cx="70" cy="860" r="5"/>
+    <circle class="map-pin" cx="340" cy="20" r="5"/>
+  </svg>
+
+  <header class="top glass">
+    <span class="top-title">Routing Profile Creator</span>
+    <span class="top-sub">for OsmAnd</span>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <h1>Make OsmAnd route the way you ride.</h1>
+      <p>Pick your bike, adjust a few things, and send the profile straight to the app.</p>
+    </section>
+
+    <section aria-label="Presets">
+      <div class="presets" role="radiogroup" aria-label="Start from">
+        <button class="chip glass" role="radio" aria-checked="true" data-preset="small">Small motorcycle</button>
+        <button class="chip glass" role="radio" aria-checked="false" data-preset="light">125 cc</button>
+        <button class="chip glass" role="radio" aria-checked="false" data-preset="touring">Touring</button>
+      </div>
+    </section>
+
+    <section class="panel glass speed" aria-labelledby="speed-label">
+      <div class="panel-head">
+        <h2 id="speed-label">My top speed</h2>
+        <p class="hint">Routes are calculated as if you never go faster than this. Faster roads are still used when they save time.</p>
+      </div>
+      <output class="speed-readout" for="maxSpeed" aria-live="polite">
+        <span id="speedValue">90</span><span class="unit">km/h</span>
+      </output>
+      <input class="range" id="maxSpeed" type="range" min="40" max="140" step="5" value="90" aria-label="Top speed in km/h">
+      <div class="range-ends" aria-hidden="true"><span>40</span><span>140</span></div>
+    </section>
+
+    <section class="panel glass" aria-labelledby="turns-label">
+      <div class="panel-head">
+        <h2 id="turns-label">Turns</h2>
+        <p class="hint" id="turnsHint">Bends cost a little time. Good for most bikes.</p>
+      </div>
+      <input class="range" id="turns" type="range" min="0" max="100" step="5" value="50" aria-describedby="turnsHint" aria-label="Turn preference">
+      <div class="range-ends"><span>Curvy is fine</span><span>Prefer straight</span></div>
+    </section>
+
+    <section class="panel glass" aria-labelledby="avoid-label">
+      <div class="panel-head">
+        <h2 id="avoid-label">Switches in the app</h2>
+        <p class="hint">These appear in OsmAnd under Route parameters → Avoid roads. You can turn them on and off per trip.</p>
+      </div>
+      <label class="row">
+        <span class="row-text">
+          <span class="row-title">Avoid traffic lights</span>
+          <span class="row-sub">Strongly prefer roads with fewer lights</span>
+        </span>
+        <input class="switch" type="checkbox" id="optLights" checked>
+      </label>
+      <label class="row">
+        <span class="row-text">
+          <span class="row-title">Block motorways and motorroads</span>
+          <span class="row-sub">Never use motorways or roads with motorway rules</span>
+        </span>
+        <input class="switch" type="checkbox" id="optMotorroads" checked>
+      </label>
+    </section>
+
+    <section class="panel glass" aria-labelledby="name-label">
+      <div class="panel-head">
+        <h2 id="name-label"><label for="profileName">Profile name</label></h2>
+        <p class="hint">Shown in OsmAnd's Navigation type list.</p>
+      </div>
+      <input class="text" id="profileName" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="Moto 90">
+    </section>
+
+    <details class="panel glass advanced">
+      <summary>Advanced</summary>
+      <div class="adv-grid">
+        <label class="field"><span>Speed on unknown roads (km/h)</span>
+          <input class="text num" id="defaultSpeed" type="number" inputmode="numeric" min="10" max="140" value="50"></label>
+        <label class="field"><span>Traffic light penalty (seconds)</span>
+          <input class="text num" id="lightPenalty" type="number" inputmode="numeric" min="0" max="600" value="60"></label>
+        <label class="field"><span>Sharp turn (s)</span>
+          <input class="text num" id="sharpTurn" type="number" inputmode="numeric" min="0" max="120" value="15"></label>
+        <label class="field"><span>Slight turn (s)</span>
+          <input class="text num" id="slightTurn" type="number" inputmode="numeric" min="0" max="120" value="8"></label>
+        <label class="field"><span>Roundabout (s)</span>
+          <input class="text num" id="roundaboutTurn" type="number" inputmode="numeric" min="0" max="120" value="5"></label>
+      </div>
+    </details>
+
+    <p class="footnote">Mockup. The file it creates is a minimal test profile for checking that sharing and importing work. Don't navigate with it.<br>
+    Not affiliated with or endorsed by OsmAnd B.V.</p>
+  </main>
+
+  <div class="dock glass">
+    <button class="btn-primary" id="shareBtn" type="button">Send to OsmAnd</button>
+    <button class="btn-secondary" id="downloadBtn" type="button" aria-label="Download file">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <!-- Instructions sheet -->
+  <div class="scrim" id="scrim" hidden></div>
+  <section class="sheet glass" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+    <div class="grabber" aria-hidden="true"></div>
+    <h2 id="sheetTitle">Finish in OsmAnd</h2>
+    <div id="sheetBody"></div>
+    <button class="btn-primary" id="sheetClose" type="button">Done</button>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
