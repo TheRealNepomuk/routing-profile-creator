@@ -306,6 +306,10 @@ body {
   font-size: 13px;
   color: var(--ink-3);
 }
+.footnote a { color: var(--ink-2); }
+.status:empty { display: none; }
+.status { margin: 0 4px; color: #ffb36b; font-size: 15px; }
+.sheet .small { margin: 0 0 18px; font-size: 14px; color: var(--ink-2); }
 
 /* ---------- dock ---------- */
 .dock {
@@ -338,18 +342,8 @@ body {
   transition: transform .12s;
 }
 .btn-primary:active { transform: scale(0.97); }
-
-.btn-secondary {
-  flex: none;
-  width: 56px; height: 56px;
-  border-radius: 50%;
-  border: 1px solid var(--glass-edge);
-  background: rgba(255,255,255,0.08);
-  color: var(--ink);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
+.btn-primary:disabled { opacity: 0.5; cursor: progress; }
+.dock .btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
 
 /* ---------- sheet ---------- */
 .scrim {

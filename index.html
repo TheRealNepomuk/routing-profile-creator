@@ -116,14 +116,18 @@
       </div>
     </details>
 
-    <p class="footnote">Mockup. The file it creates is a minimal test profile for checking that sharing and importing work. Don't navigate with it.<br>
+    <p class="status" id="status" role="status"></p>
+
+    <p class="footnote">The file is OsmAnd's own car profile with your changes, and every change is listed at the top of the file.
+    Based on <a href="https://github.com/osmandapp/OsmAnd-resources">OsmAnd routing data</a> (GPLv3).
+    <a href="https://github.com/TheRealNepomuk/routing-profile-creator">Source code</a>.<br>
     Not affiliated with or endorsed by OsmAnd B.V.</p>
   </main>
 
   <div class="dock glass">
-    <button class="btn-primary" id="shareBtn" type="button">Send to OsmAnd</button>
-    <button class="btn-secondary" id="downloadBtn" type="button" aria-label="Download file">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <button class="btn-primary" id="downloadBtn" type="button">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Download XML file
     </button>
   </div>
 
@@ -136,6 +140,6 @@
     <button class="btn-primary" id="sheetClose" type="button">Done</button>
   </section>
 
-  <script src="js/app.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>

@@ -5,18 +5,21 @@
 **Name:** Routing Profile Creator — *Custom routing profiles for OsmAnd*
 **Repo:** https://github.com/TheRealNepomuk/routing-profile-creator (public) · **Hosting:** GitHub Pages ·
 **Language:** English
-**Live:** https://therealnepomuk.github.io/routing-profile-creator/ (mockup) ·
-share test page: `/test/share.html` (temporary)
+**Live:** https://therealnepomuk.github.io/routing-profile-creator/
 
-## Where we left off (2026-11-14)
+## Where we are (2026-11-14, afternoon)
 
-- Mockup is live and the design is approved (dark liquid glass, accent = OsmAnd orange `#ff8f00`).
-  It still generates a minimal **TEST** profile only.
-- **Blocker: getting the file into OsmAnd on iOS easily.** See "iOS import findings" below.
-- **Next step (user, on iPhone):** build and test the "Send to OsmAnd" Shortcut (steps below).
-  If it imports without a restart → user shares the iCloud link, we put it on the site.
-- Then: decide the final iOS flow, update button + instructions sheet, remove `test/`.
-- After that: the real OsmAnd exporter (full upstream car profile as template).
+- Design approved (dark liquid glass, accent = OsmAnd orange `#ff8f00`).
+- **Delivery decided: one "Download XML file" button on all platforms** + platform-specific
+  instructions sheet. Web Share and the Shortcut idea are dropped (see findings below).
+  `test/` share page removed.
+- **Real OsmAnd exporter built** (`js/exporters/osmand.js`), template = upstream car profile
+  pinned at OsmAnd-resources commit `8169ef8` (2026-11-12) in `templates/osmand-car.xml`.
+  Verified: output for the v2 settings = the private `Motorcycle_90kph_v2.xml` plus only the upstream
+  changes since Nov 2025 (canonical XML comparison). Output is valid XML; special characters in
+  names are escaped.
+- **Next:** test a generated profile on the iPhone (import, Navigation type, switches, a ~200 km route).
+  Then: final presets, maybe visual step illustrations in the instructions sheet.
 
 ## iOS import findings (tested 2026-11-14, iPhone 17)
 
@@ -28,7 +31,13 @@ share test page: `/test/share.html` (temporary)
 | OsmAnd deep link to import from a URL | **Doesn't exist.** `DeepLinkParser.swift` (OsmAnd-iOS) only accepts local `file://` URLs for files. |
 | Existing OsmAnd issue asking for import-by-URL / share extension | **None found** (searched OsmAnd-iOS and OsmAnd, 2026-11-14). Closest: #750 (2021, closed, general import). |
 
-### Idea being tested: iOS Shortcut "Send to OsmAnd"
+### Dropped: iOS Shortcut "Send to OsmAnd"
+
+Tested by the user: a new Shortcut is hidden in the share sheet by default (has to be enabled
+manually), and the profile still has to be selected in OsmAnd afterwards. Too much setup for
+little gain → plain download + good instructions instead.
+
+Original idea, for reference:
 
 One-time install via iCloud link; afterwards: Send → share sheet → *Send to OsmAnd* → done.
 It should use "Open in" (immediate import), not Save to Files (needs restart).
@@ -71,8 +80,7 @@ trailer limited to 100 km/h, should be possible later by adding presets, not rew
 
 ## Scope v1
 
-- Settings form → generate XML → **share sheet** (Web Share API with the file) → OsmAnd
-- Download fallback when sharing isn't available (desktop, older browsers)
+- Settings form → generate XML → **"Download XML file"** → user hands it to OsmAnd
 - Instructions page / section, platform-detected (iOS vs Android)
 
 ## Out of scope (parked)
@@ -127,8 +135,9 @@ The page and settings should not need to change to add one.
 
 ## Delivery to OsmAnd
 
-1. **Share button** (`navigator.share({ files })`) → user picks OsmAnd in the share sheet.
-2. **Download** fallback.
+One **"Download XML file"** button (Blob + `download` attribute, template preloaded so the
+download happens inside the tap). Then the instructions sheet. Web Share was tested and dropped:
+OsmAnd never shows up in the iOS share sheet for files coming from a web page.
 
 ## Instructions page
 
@@ -157,9 +166,10 @@ to host and keep working. Revisit only if the form grows a lot.
 ## Test plan
 
 - [x] Share sheet with a `.xml` file on iPhone (Safari) → OsmAnd appears as a target? **No** (see iOS import findings)
-- [ ] iOS Shortcut "Send to OsmAnd" imports without restart?
+- [x] iOS Shortcut "Send to OsmAnd": works in principle, dropped (setup too fiddly)
+- [ ] Generated (full) profile on iPhone: import, Navigation type, both switches, ~200 km route
 - [ ] Same on Android (Chrome)
-- [ ] Download fallback on both + desktop
+- [ ] Download on iPhone, Android and desktop (desktop Chrome: works)
 - [ ] Generated file loads in OsmAnd, profile name shows up, toggles appear, a ~200 km route calculates
 - [ ] Output diff vs upstream contains only the intended changes
 
