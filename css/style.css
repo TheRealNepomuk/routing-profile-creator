@@ -159,6 +159,9 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .unit { font-size: 13px; color: var(--ink-3); min-width: 30px; }
 .f.changed .f-val, .f.changed .num { color: var(--amber); }
 .f.changed .num { border-color: rgba(255, 170, 60, 0.45); }
+.f-limit { display: flex; align-items: center; gap: 8px; min-height: 36px; margin: 0 0 4px; font-size: 14px; color: var(--ink-2); cursor: pointer; width: fit-content; }
+.f-limit .check { width: 18px; height: 18px; margin: 0; accent-color: var(--amber); }
+.f-limit.changed { color: var(--amber); }
 
 .num {
   width: 74px; height: 36px; padding: 0 10px;

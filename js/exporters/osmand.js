@@ -54,7 +54,8 @@ function readValue(profile, field) {
     const raw = selectsFor(profile, t)[0].getAttribute("value");
     return field.control === "toggle" ? raw === field.on : parseFloat(raw);
   }
-  if (t.kind === "override") return 0; // new rule, off in upstream
+  if (t.kind === "surfaceSpeed") return 0; // new rule, none in upstream
+  if (t.kind === "override") return false; // "Ignore speed limits" box, off in upstream
   return field.control === "toggle" ? false : null; // custom additions: off in upstream
 }
 
@@ -104,20 +105,41 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
     changes.push(`${describe(t)}: ${fmt(f, old)} -> ${fmt(f, v)}`);
   }
 
-  // --- 1b. speed-limit overrides: new rules placed before the $maxspeed rules (first match wins) ---
-  const overrides = ALL_FIELDS.filter((f) => f.target.kind === "override" && Number(s.values[f.id]) > 0)
-    .sort((a, b) => (a.target.t === "surface" ? 0 : 1) - (b.target.t === "surface" ? 0 : 1)); // surfaces first
-  if (overrides.length) {
+  // --- 1b. new speed rules (first match wins) ---
+  // Ticked "Ignore speed limits" boxes: the slider's value goes BEFORE the $maxspeed rules, surfaces first.
+  // Surface speeds without the box go right AFTER the $maxspeed rules, before the road types.
+  const byId = Object.fromEntries(ALL_FIELDS.map((f) => [f.id, f]));
+  const kmh = (f) => String(Math.round(Number(s.values[f.id])));
+  const before = [], after = [];
+  for (const f of ALL_FIELDS) {
+    if (f.target.kind === "override") {
+      const p = byId[f.of];
+      if (!s.values[f.id] || !(Number(s.values[p.id]) > 0)) continue;
+      const pairs = p.target.kind === "surfaceSpeed" ? [[p.target.t, p.target.v]] : p.target.pairs;
+      before.push({ surface: p.target.kind === "surfaceSpeed", value: kmh(p), pairs });
+    } else if (f.target.kind === "surfaceSpeed" && Number(s.values[f.id]) > 0 && !s.values[f.limitBox.id]) {
+      after.push({ value: kmh(f), pairs: [[f.target.t, f.target.v]] });
+    }
+  }
+  before.sort((a, b) => (a.surface ? 0 : 1) - (b.surface ? 0 : 1));
+  if (before.length || after.length) {
     const speed = section(profile, ["way", "speed"]);
-    const firstLimit = children(speed).find((e) => e.nodeName === "select" && (e.getAttribute("value") || "").startsWith("$"));
-    if (!firstLimit) throw new Error("Template has no speed-limit rule");
-    speed.insertBefore(doc.createComment(" Routing Profile Creator: fixed speeds that override OSM speed limits "), firstLimit);
-    speed.insertBefore(doc.createTextNode("\n\t\t\t"), firstLimit);
-    for (const f of overrides) {
-      const kmh = String(Math.round(Number(s.values[f.id])));
-      speed.insertBefore(el(doc, "select", { value: kmh, t: f.target.t, v: f.target.v }), firstLimit);
-      speed.insertBefore(doc.createTextNode("\n\t\t\t"), firstLimit);
-      changes.push(`speed ${f.target.t}=${f.target.v}: ${kmh} km/h, overrides speed limits`);
+    const limits = children(speed).filter((e) => e.nodeName === "select" && (e.getAttribute("value") || "").startsWith("$"));
+    if (!limits.length) throw new Error("Template has no speed-limit rule");
+    const insert = (rules, anchor, comment, note) => {
+      speed.insertBefore(doc.createComment(comment), anchor);
+      speed.insertBefore(doc.createTextNode("\n\t\t\t"), anchor);
+      for (const r of rules) for (const [t, v] of r.pairs) {
+        speed.insertBefore(el(doc, "select", { value: r.value, t, v }), anchor);
+        speed.insertBefore(doc.createTextNode("\n\t\t\t"), anchor);
+        changes.push(`speed ${t}=${v}: ${r.value} km/h${note}`);
+      }
+    };
+    const afterLimits = limits[limits.length - 1].nextSibling;
+    if (before.length) insert(before, limits[0], " Routing Profile Creator: fixed speeds that ignore OSM speed limits ", ", ignores speed limits");
+    if (after.length) {
+      speed.insertBefore(doc.createTextNode("\n\t\t\t"), afterLimits);
+      insert(after, afterLimits, " Routing Profile Creator: surface speeds (where no speed limit is mapped) ", " where no speed limit");
     }
   }
 

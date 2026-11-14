@@ -40,6 +40,7 @@ function renderField(f) {
   if (f.control === "slider") {
     end = `<output class="f-val" for="${fid}" id="v-${f.id}"></output>`;
     below = `<input class="range" id="${fid}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" aria-label="${esc(f.label)}">`;
+    if (f.limitBox) below += `<label class="f-limit"><input class="check" id="f-${f.limitBox.id}" type="checkbox"> ${esc(f.limitBox.label)}</label>`;
   } else if (f.control === "toggle") {
     end = `<input class="switch" id="${fid}" type="checkbox">`;
   }
@@ -81,14 +82,14 @@ function showField(f) {
   if (f.control === "toggle") input.checked = !!values[f.id];
   else input.value = values[f.id];
   if (f.control === "slider") { $("v-" + f.id).textContent = fmtVal(f, values[f.id]); setFill(input); }
-  input.closest(".f").classList.toggle("changed", isChanged(f));
+  (f.of ? input.closest(".f-limit") : input.closest(".f")).classList.toggle("changed", isChanged(f));
   const d = $("d-" + f.id);
   if (d) d.textContent = defaults[f.id] === undefined ? "" : `OsmAnd default: ${fmtVal(f, defaults[f.id])}`;
 }
 
 function updateSummaries() {
   for (const s of SECTIONS) {
-    const fields = s.groups.flatMap((g) => g.fields);
+    const fields = s.groups.flatMap((g) => g.fields.flatMap((f) => (f.limitBox ? [f, f.limitBox] : [f])));
     const n = fields.filter(isChanged).length;
     const sum = $("sum-" + s.id);
     sum.textContent = s.id === "speed" ? `max ${values.maxSpeed} km/h` : (n ? `${n} changed` : "OsmAnd default");

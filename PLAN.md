@@ -42,6 +42,12 @@
   commented out in `RouteResultPreparation`). "Short way mode" → "Fuel-efficient mode" (app label of
   `short_way` is "Fuel-efficient way"; it caps routing speed at 55 km/h). "Changing road type" →
   "Switching road type" with a worked example.
+- **Speed merged (same night):** one slider per road type (speed where no limit is mapped) with an
+  "Ignore speed limits" box → same value as a new rule before the `$maxspeed` rules (plain override,
+  user's choice; the town 30/50 risk is a warning in the ⓘ). No box on motorway/trunk ramps (OsmAnd
+  ignores limits there already), ferries and car trains. Surface speeds (collapsed, off by default):
+  rule right after the `$maxspeed` rules, or before them with the box. "Roads without a speed limit"
+  section removed again.
 - **Next (user, with fresh mind):** review on the phone, decide grouping and what to cut.
   Candidates: barrier slider range 0–600 s (fiddly), paths/footways/steps in Allowed roads,
   Short way mode, Changing road type. Later: new rules beyond the car profile (gradient,

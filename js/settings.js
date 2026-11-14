@@ -8,7 +8,10 @@
 //   { kind: "select", parent: [tag, attribute], pairs: [[t, v], …] }
 //        → direct-child <select t v value="…"> (t or v null = attribute absent); all pairs get the
 //          same value, the first one is read as the default
-//   { kind: "override", t, v }                   → NEW speed rule placed before the speed-limit rules
+//   { kind: "surfaceSpeed", t, v }               → NEW speed rule (surfaces have none upstream); 0 = no rule.
+//        Placed right after the speed-limit rules, or before them when its "Ignore speed limits" box is ticked
+//   { kind: "override" }                         → "Ignore speed limits" box of a speed slider (field.of):
+//        the slider's value as NEW rule(s) placed before the speed-limit rules
 //   { kind: "custom" }                           → handled by name in the exporter
 // Toggles on a select target store true/false and write `on` / `off` (default 1 / -1).
 // Info texts: a blank line ("\n\n") starts a new paragraph.
@@ -65,12 +68,18 @@ const SURFACE = {
 };
 
 // ---- field builders with explanation texts ----
-const roadSpeed = (id, label, desc, pairs, note = "") => slider("speed_" + id, label, KMH, 5, 150, 5, sel(SPEED, ...pairs),
-  `${desc}\n\nSpeed used on these roads when OSM has no speed limit for them. Capped by your max cruising speed.${note}`);
+// Speed sliders can carry an "Ignore speed limits" box: a toggle field rendered inside the slider's row.
+const limitBox = (id) => ({ id: "over_" + id, of: "speed_" + id, label: "Ignore speed limits", control: "toggle", target: { kind: "override" } });
+const IGNORE_INFO = "Tick \"Ignore speed limits\" to use this speed even where OSM has a speed limit, e.g. for gravel roads with a 100 limit that you'd ride at 40.\n\n"
+  + "Careful: it then applies to every road of this type, including stretches through towns with a 30 or 50 limit, so routes through towns look faster than they are. Your max cruising speed still caps it.";
 
-const override = (id, label, desc, t, v) => slider("over_" + id, label, KMH, 0, 120, 5, { kind: "override", t, v },
-  `${desc}\n\nIf set, these roads are always calculated at this speed, even where OSM has a speed limit for them. Off = use the speed limit. Still capped by your max cruising speed.`,
-  { offAtZero: "Off" });
+const roadSpeed = (id, label, desc, pairs, { note = "", box = true } = {}) => slider("speed_" + id, label, KMH, 5, 150, 5, sel(SPEED, ...pairs),
+  `${desc}\n\nSpeed used on these roads where OSM has no speed limit for them. Where it has one, OsmAnd uses the limit.${note}` + (box ? "\n\n" + IGNORE_INFO : ""),
+  box ? { limitBox: limitBox(id) } : {});
+
+const surfaceSpeed = (id, label, desc, v) => slider("speed_" + id, label, KMH, 0, 120, 5, { kind: "surfaceSpeed", t: "surface", v },
+  `${desc}\n\nYour speed for this surface where OSM has no speed limit. Off = the road type's speed is used.\n\n${IGNORE_INFO}`,
+  { offAtZero: "Off", limitBox: limitBox(id) });
 
 const prio = (id, label, desc, pairs) => slider("prio_" + id, label, X, 0.01, 2, 0.01, sel(PRIO, ...pairs),
   `${desc}\n\nHow much the route planner likes these roads: it treats them as if they were this many times as fast. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.`);
@@ -106,19 +115,37 @@ export const SECTIONS = [
         ],
       },
       {
-        title: "Override speed limits",
-        info: "Where OSM has a speed limit for a road, OsmAnd calculates with it. Here you can set your own speed instead, e.g. for gravel roads with a 100 limit that you'd ride at 40. If a road matches a surface and a road type, the surface wins.",
+        title: "Speed per road type",
+        info: "Where OSM has a speed limit for a road, OsmAnd calculates with the limit. Where it has none, it uses the speed you set here for the road type. In many areas that's most minor roads.\n\nWith \"Ignore speed limits\" ticked, your speed is used on that road type everywhere. Your max cruising speed caps all of them.",
         fields: [
-          override("track", "Track", ROAD.track, "highway", "track"),
-          override("unclassified", "Unclassified", ROAD.unclassified, "highway", "unclassified"),
-          override("residential", "Residential", ROAD.residential, "highway", "residential"),
-          override("service", "Service road", ROAD.service, "highway", "service"),
-          override("unpaved", "Unpaved surface", SURFACE.unpaved, "surface", "unpaved"),
-          override("gravel", "Gravel surface", SURFACE.gravel, "surface", "gravel"),
-          override("fine_gravel", "Fine gravel surface", SURFACE.fine_gravel, "surface", "fine_gravel"),
-          override("compacted", "Compacted surface", SURFACE.compacted, "surface", "compacted"),
-          override("dirt", "Dirt surface", SURFACE.dirt, "surface", "dirt"),
-          override("ground", "Ground surface", SURFACE.ground, "surface", "ground"),
+          roadSpeed("motorway", "Motorway", ROAD.motorway, [["highway", "motorway"]]),
+          roadSpeed("motorway_link", "Motorway ramp", ROAD.motorway_link, [["highway", "motorway_link"]], { box: false, note: " Exception: OsmAnd always uses this speed on motorway ramps, even if they have a speed limit." }),
+          roadSpeed("trunk", "Trunk road", ROAD.trunk, [["highway", "trunk"]]),
+          roadSpeed("trunk_link", "Trunk ramp", ROAD.trunk_link, [["highway", "trunk_link"]], { box: false, note: " Exception: OsmAnd uses this speed on trunk ramps even if they have a speed limit, except in towns (limit 50 or less)." }),
+          roadSpeed("primary", "Primary and ramp", withRamp("primary"), [["highway", "primary"], ["highway", "primary_link"]]),
+          roadSpeed("secondary", "Secondary and ramp", withRamp("secondary"), [["highway", "secondary"], ["highway", "secondary_link"]]),
+          roadSpeed("tertiary", "Tertiary and ramp", withRamp("tertiary"), [["highway", "tertiary"], ["highway", "tertiary_link"]]),
+          roadSpeed("unclassified", "Unclassified", ROAD.unclassified + ROAD.unclassified_road, [["highway", "unclassified"], ["highway", "road"]]),
+          roadSpeed("residential", "Residential", ROAD.residential, [["highway", "residential"]]),
+          roadSpeed("service", "Service road", ROAD.service, [["highway", "service"]]),
+          roadSpeed("living_street", "Living street", ROAD.living_street, [["highway", "living_street"]]),
+          roadSpeed("track", "Track", ROAD.track, [["highway", "track"]]),
+          roadSpeed("ferry", "Ferry", ROAD.ferry, [["route", "ferry"]], { box: false }),
+          roadSpeed("shuttle_train", "Car train", ROAD.shuttle_train, [["route", "shuttle_train"]], { box: false }),
+          slider("defaultSpeed", "Fallback speed", KMH, 5, 150, 5, { kind: "attr", attr: "defaultSpeed" },
+            "For roads that match none of the types above and have no speed limit, e.g. paths or cycleways if you allow them. Roads of unknown type (highway=road) use the Unclassified value instead.", { start: 50 }),
+        ],
+      },
+      {
+        title: "Speed per surface", collapsed: true,
+        info: "OsmAnd's car profile has no speeds for surfaces, so these are off by default. A surface speed comes before the road type: a gravel tertiary road uses the gravel speed.",
+        fields: [
+          surfaceSpeed("unpaved", "Unpaved", SURFACE.unpaved, "unpaved"),
+          surfaceSpeed("gravel", "Gravel", SURFACE.gravel, "gravel"),
+          surfaceSpeed("fine_gravel", "Fine gravel", SURFACE.fine_gravel, "fine_gravel"),
+          surfaceSpeed("compacted", "Compacted", SURFACE.compacted, "compacted"),
+          surfaceSpeed("dirt", "Dirt", SURFACE.dirt, "dirt"),
+          surfaceSpeed("ground", "Ground", SURFACE.ground, "ground"),
         ],
       },
     ],
@@ -263,32 +290,6 @@ export const SECTIONS = [
     ],
   },
   {
-    id: "nolimit", title: "Roads without a speed limit",
-    intro: "Where OSM has no speed limit for a road, OsmAnd calculates with a typical speed for its road type. In many areas this applies to most minor roads.",
-    groups: [
-      {
-        fields: [
-          roadSpeed("motorway", "Motorway", ROAD.motorway, [["highway", "motorway"]]),
-          roadSpeed("motorway_link", "Motorway ramp", ROAD.motorway_link, [["highway", "motorway_link"]], " Used for ramps even if they have a speed limit."),
-          roadSpeed("trunk", "Trunk road", ROAD.trunk, [["highway", "trunk"]]),
-          roadSpeed("trunk_link", "Trunk ramp", ROAD.trunk_link, [["highway", "trunk_link"]], " Used for ramps even if they have a speed limit, except in towns (limit 50 or less)."),
-          roadSpeed("primary", "Primary and ramp", withRamp("primary"), [["highway", "primary"], ["highway", "primary_link"]]),
-          roadSpeed("secondary", "Secondary and ramp", withRamp("secondary"), [["highway", "secondary"], ["highway", "secondary_link"]]),
-          roadSpeed("tertiary", "Tertiary and ramp", withRamp("tertiary"), [["highway", "tertiary"], ["highway", "tertiary_link"]]),
-          roadSpeed("unclassified", "Unclassified", ROAD.unclassified + ROAD.unclassified_road, [["highway", "unclassified"], ["highway", "road"]]),
-          roadSpeed("residential", "Residential", ROAD.residential, [["highway", "residential"]]),
-          roadSpeed("service", "Service road", ROAD.service, [["highway", "service"]]),
-          roadSpeed("living_street", "Living street", ROAD.living_street, [["highway", "living_street"]]),
-          roadSpeed("track", "Track", ROAD.track, [["highway", "track"]]),
-          roadSpeed("ferry", "Ferry", ROAD.ferry, [["route", "ferry"]]),
-          roadSpeed("shuttle_train", "Car train", ROAD.shuttle_train, [["route", "shuttle_train"]]),
-          slider("defaultSpeed", "Fallback speed", KMH, 5, 150, 5, { kind: "attr", attr: "defaultSpeed" },
-            "For roads that match none of the types above, e.g. paths or cycleways if you allow them. Roads of unknown type (highway=road) use the Unclassified value instead.", { start: 50 }),
-        ],
-      },
-    ],
-  },
-  {
     id: "shortway", title: "Fuel-efficient mode",
     intro: "OsmAnd has a \"Fuel-efficient way\" switch under Route parameters. It plans shorter routes by counting every road as at most 55 km/h, and uses these turn values instead of the ones in Extra time.",
     groups: [
@@ -321,7 +322,7 @@ export const SECTIONS = [
   },
 ];
 
-export const ALL_FIELDS = SECTIONS.flatMap((s) => s.groups.flatMap((g) => g.fields));
+export const ALL_FIELDS = SECTIONS.flatMap((s) => s.groups.flatMap((g) => g.fields.flatMap((f) => (f.limitBox ? [f, f.limitBox] : [f]))));
 
 export function autoName(values) {
   return `Moto ${values.maxSpeed}` + (values.blockMotorroads ? " no motorways" : "");
