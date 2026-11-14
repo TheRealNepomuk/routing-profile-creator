@@ -34,6 +34,14 @@
   barriers, changing road type), Arrival time (obstacle_time), Allowed roads, Short way mode,
   Switches in the app. Speed-limit overrides = new rules inserted before the `$maxspeed` rules.
   Left out on purpose: GPX approximation params, heuristicCoefficient, onewayAware/restrictionsAware.
+- **2026-11-14 night: first review round.** Speed section = max + min speed + speed-limit overrides;
+  per-road speeds and fallback speed moved to their own section "Roads without a speed limit" lower
+  down. Arrival time section removed (obstacle_time stays at OsmAnd default). Every road type,
+  surface, obstacle and barrier has a plain explanation in its ⓘ. "Extra time" says up front that it
+  doesn't change the arrival time (checked: ETA = distance / speed + obstacle_time only, turn time is
+  commented out in `RouteResultPreparation`). "Short way mode" → "Fuel-efficient mode" (app label of
+  `short_way` is "Fuel-efficient way"; it caps routing speed at 55 km/h). "Changing road type" →
+  "Switching road type" with a worked example.
 - **Next (user, with fresh mind):** review on the phone, decide grouping and what to cut.
   Candidates: barrier slider range 0–600 s (fiddly), paths/footways/steps in Allowed roads,
   Short way mode, Changing road type. Later: new rules beyond the car profile (gradient,

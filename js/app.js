@@ -22,6 +22,7 @@ function fmtVal(f, v) {
   const n = +Number(v).toFixed(2);
   return f.unit === "×" ? `${n}×` : `${n} ${f.unit}`;
 }
+const paras = (text) => text.split("\n\n").map((t) => `<p>${esc(t)}</p>`).join("");
 const isChanged = (f) => defaults[f.id] !== undefined && values[f.id] !== defaults[f.id];
 
 // ---------- rendering ----------
@@ -42,7 +43,7 @@ function renderField(f) {
   } else if (f.control === "toggle") {
     end = `<input class="switch" id="${fid}" type="checkbox">`;
   }
-  const info = (f.info ? `<p>${esc(f.info)}</p>` : "") +
+  const info = (f.info ? paras(f.info) : "") +
     `<p class="f-default"><span id="d-${f.id}"></span><button type="button" class="link-btn" data-reset="${f.id}">Use default</button></p>`;
   return `<div class="f" data-field="${f.id}">
     <div class="f-row"><label class="f-label" for="${fid}">${esc(f.label)}</label>${infoButton(iid, f.label)}<span class="f-end">${end}</span></div>
@@ -55,7 +56,7 @@ function renderGroup(g) {
   const head = g.title || g.info
     ? `<div class="group-head">${g.title ? `<h3>${esc(g.title)}</h3>` : ""}${g.info ? infoButton(gid, g.title || "this section") : ""}${g.collapsed ? '<span class="chev"></span>' : ""}</div>`
     : "";
-  const info = g.info ? infoBlock(gid, `<p>${esc(g.info)}</p>`, "group-info") : "";
+  const info = g.info ? infoBlock(gid, paras(g.info), "group-info") : "";
   const fields = g.fields.map(renderField).join("");
   if (g.collapsed) return `<details class="group"><summary>${head}</summary>${info}${fields}</details>`;
   return `<div class="group">${head}${info}${fields}</div>`;
@@ -65,7 +66,7 @@ function render() {
   el.sections.innerHTML = SECTIONS.map((s, i) => `
     <details class="panel glass sec" data-section="${s.id}"${i === 0 ? " open" : ""}>
       <summary><span class="sec-title">${esc(s.title)}</span><span class="sec-sum" id="sum-${s.id}"></span><span class="chev"></span></summary>
-      <div class="sec-body">${s.groups.map(renderGroup).join("")}</div>
+      <div class="sec-body">${s.intro ? `<p class="sec-intro">${esc(s.intro)}</p>` : ""}${s.groups.map(renderGroup).join("")}</div>
     </details>`).join("");
 }
 

@@ -184,6 +184,8 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
   font-size: 14px; line-height: 1.45; color: var(--ink-2);
 }
 .f-info p, .group-info p { margin: 0; }
+.f-info p + p, .group-info p + p { margin-top: 6px; }
+.sec-intro { margin: 0 0 4px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
 .f-info .f-default { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--ink-3); }
 .f-info code, .group-info code { font-size: 13px; color: var(--ink); }
 .link-btn {
