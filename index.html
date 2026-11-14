@@ -34,87 +34,17 @@
   <main class="page">
     <section class="intro">
       <h1>Make OsmAnd route the way you ride.</h1>
-      <p>Set how OsmAnd should plan your routes, then download the profile and add it to the app.</p>
+      <p>Adjust OsmAnd's routing values, then download the profile for the app.</p>
     </section>
 
-    <section class="panel glass speed" aria-labelledby="speed-label">
-      <div class="panel-head">
-        <h2 id="speed-label">Max cruising speed</h2>
-        <p class="hint">The speed you usually want to (or can) cruise at. Routes are planned as if you never go faster. Faster roads still count when they save time.</p>
-      </div>
-      <output class="speed-readout" for="maxSpeed" aria-live="polite">
-        <span id="speedValue">90</span><span class="unit">km/h</span>
-      </output>
-      <input class="range" id="maxSpeed" type="range" min="40" max="140" step="5" value="90" aria-label="Max cruising speed in km/h">
-      <div class="range-ends" aria-hidden="true"><span>40</span><span>140</span></div>
-      <label class="inline-field">
-        <span>Speed on roads with no known speed</span>
-        <span class="inline-input"><input class="text num" id="defaultSpeed" type="number" inputmode="numeric" min="5" max="140" value="50"> km/h</span>
+    <div id="sections" class="sections"></div>
+
+    <section class="panel glass name-panel">
+      <label class="f-row" for="profileName">
+        <span class="f-label">Profile name</span>
       </label>
-    </section>
-
-    <section class="panel glass" aria-labelledby="time-label">
-      <div class="panel-head">
-        <h2 id="time-label">Extra time planned</h2>
-        <p class="hint">Seconds the route planner adds for each turn and traffic light. More time means the planner avoids them more.</p>
-      </div>
-
-      <div class="sub">
-        <div class="sub-head">
-          <h3 id="turn-label">Per turn</h3>
-          <output class="mini-readout" for="turns"><span id="turnValue">15</span> s</output>
-        </div>
-        <p class="sub-detail" id="turnDetail">sharp turns · slight turns 8 s · roundabouts 5 s</p>
-        <input class="range" id="turns" type="range" min="0" max="60" step="1" value="15" aria-labelledby="turn-label" aria-describedby="turnDetail">
-        <div class="range-ends"><span>0 s</span><span>60 s</span></div>
-        <p class="default-note">OsmAnd default: 30 s <button type="button" class="link-btn" data-reset="turns">Use default</button></p>
-      </div>
-
-      <div class="sub">
-        <div class="sub-head">
-          <h3 id="light-label">Per traffic light</h3>
-          <output class="mini-readout" for="lights"><span id="lightValue">15</span> s</output>
-        </div>
-        <p class="sub-detail" id="lightDetail">Arrival times keep using OsmAnd's normal estimate.</p>
-        <input class="range" id="lights" type="range" min="0" max="180" step="5" value="15" aria-labelledby="light-label" aria-describedby="lightDetail lightLimit">
-        <div class="range-ends"><span>0 s</span><span>180 s</span></div>
-        <p class="default-note">OsmAnd default: 15 s <button type="button" class="link-btn" data-reset="lights">Use default</button></p>
-        <p class="sub-detail" id="lightLimit">0 means traffic lights don't matter. OsmAnd can't prefer them: anything below 0 would block every traffic light.</p>
-      </div>
-    </section>
-
-    <section class="panel glass" aria-labelledby="avoid-label">
-      <div class="panel-head">
-        <h2 id="avoid-label">Switches in the app</h2>
-        <p class="hint">These appear in OsmAnd under Route parameters → Avoid roads. You can turn them on and off per trip.</p>
-      </div>
-      <label class="row">
-        <span class="row-text">
-          <span class="row-title">Block motorways and motorroads</span>
-          <span class="row-sub">Never use motorways or roads with motorway rules</span>
-        </span>
-        <input class="switch" type="checkbox" id="optMotorroads" checked>
-      </label>
-    </section>
-
-    <section class="panel glass" aria-labelledby="name-label">
-      <div class="panel-head">
-        <h2 id="name-label"><label for="profileName">Profile name</label></h2>
-        <p class="hint">Shown in OsmAnd's Navigation type list.</p>
-      </div>
       <input class="text" id="profileName" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="Moto 90">
     </section>
-
-    <details class="panel glass advanced">
-      <summary>Fine-tune turns</summary>
-      <p class="hint">The turn slider sets sharp turns and scales the others. Override them here.</p>
-      <div class="adv-grid">
-        <label class="field"><span>Slight turn (s)</span>
-          <input class="text num" id="slightTurn" type="number" inputmode="numeric" min="0" max="120" value="8"></label>
-        <label class="field"><span>Roundabout (s)</span>
-          <input class="text num" id="roundaboutTurn" type="number" inputmode="numeric" min="0" max="120" value="5"></label>
-      </div>
-    </details>
 
     <p class="status" id="status" role="status"></p>
 

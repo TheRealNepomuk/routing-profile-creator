@@ -1,45 +1,131 @@
-// OsmAnd exporter: settings → complete OsmAnd routing profile (.xml).
+// OsmAnd exporter: values → complete OsmAnd routing profile (.xml).
 //
 // Starts from the unmodified upstream car profile (templates/osmand-car.xml) and changes only
-// what the settings ask for. A custom profile does NOT inherit rules from baseProfile="car",
+// values that differ from it. A custom profile does NOT inherit rules from baseProfile="car",
 // so the output must always contain the full rule set.
+
+import { ALL_FIELDS } from "../settings.js";
 
 export const TEMPLATE_URL = new URL("../../templates/osmand-car.xml", import.meta.url).href;
 
-/**
- * @param {import("../settings.js").Settings} s
- * @param {string} templateText  contents of templates/osmand-car.xml
- * @param {{DOMParser: typeof DOMParser, XMLSerializer: typeof XMLSerializer}} [dom]  injectable for tests
- * @returns {string} XML text
- */
-export function buildOsmandXml(s, templateText, dom = globalThis) {
+const ELEMENT = 1;
+
+function parse(templateText, dom) {
   const doc = new dom.DOMParser().parseFromString(templateText, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) throw new Error("Template is not valid XML");
-
   const profile = doc.getElementsByTagName("routingProfile")[0];
   if (!profile) throw new Error("Template has no routingProfile");
+  return { doc, profile };
+}
 
+// ---------- locating values in the template ----------
+const children = (parent) => Array.from(parent.childNodes).filter((n) => n.nodeType === ELEMENT);
+
+function section(profile, [tag, attribute]) {
+  const s = children(profile).find((e) => e.nodeName === tag && e.getAttribute("attribute") === attribute);
+  if (!s) throw new Error(`Template has no <${tag} attribute="${attribute}">`);
+  return s;
+}
+
+// Direct-child selects only: rules nested in <if>/<ge> blocks belong to switches and conditions.
+// A null t or v means the attribute is absent (e.g. the catch-all <select value="0.7"/>).
+const matches = (e, attr, want) => (want === null ? !e.hasAttribute(attr) : e.getAttribute(attr) === want);
+
+function selectsFor(profile, target) {
+  return target.pairs.map(([t, v]) => {
+    const sel = children(section(profile, target.parent)).find((e) => e.nodeName === "select"
+      && matches(e, "t", t) && matches(e, "v", v));
+    if (!sel) throw new Error(`Template has no ${target.parent[1]} rule for ${t ?? "*"}=${v ?? "*"}`);
+    return sel;
+  });
+}
+
+function attrChild(profile, name) {
+  const a = children(profile).find((e) => e.nodeName === "attribute" && e.getAttribute("name") === name);
+  if (!a) throw new Error(`Template has no attribute ${name}`);
+  return a;
+}
+
+function readValue(profile, field) {
+  const t = field.target;
+  if (t.kind === "attr") return parseFloat(profile.getAttribute(t.attr));
+  if (t.kind === "attrChild") return parseFloat(attrChild(profile, t.name).getAttribute("value"));
+  if (t.kind === "select") {
+    const raw = selectsFor(profile, t)[0].getAttribute("value");
+    return field.control === "toggle" ? raw === field.on : parseFloat(raw);
+  }
+  if (t.kind === "override") return 0; // new rule, off in upstream
+  return field.control === "toggle" ? false : null; // custom additions: off in upstream
+}
+
+/** OsmAnd default for every field, read from the template. */
+export function readDefaults(templateText, dom = globalThis) {
+  const { profile } = parse(templateText, dom);
+  return Object.fromEntries(ALL_FIELDS.map((f) => [f.id, readValue(profile, f)]));
+}
+
+// ---------- building ----------
+const ONE_DECIMAL = new Set(["maxSpeed", "minSpeed", "defaultSpeed"]);
+const fmt = (field, n) => {
+  if (typeof n === "boolean") return n ? field.on : field.off;
+  return ONE_DECIMAL.has(field.target.attr) ? Number(n).toFixed(1) : String(+Number(n).toFixed(4));
+};
+const describe = (t) => t.kind === "attr" ? t.attr : t.kind === "attrChild" ? t.name
+  : `${t.parent[1]} ` + (t.pairs.length > 4 ? `${t.pairs.length} rules (${[...new Set(t.pairs.map(([, b]) => b))].join("/")})`
+    : t.pairs.map(([a, b]) => `${a ?? "*"}=${b ?? "*"}`).join(", "));
+
+/**
+ * @param {{name:string, vehicle:"motorcycle"|"car", values:Object<string, number|boolean>}} s
+ * @param {string} templateText
+ * @param {{DOMParser: typeof DOMParser, XMLSerializer: typeof XMLSerializer}} [dom]
+ */
+export function buildOsmandXml(s, templateText, dom = globalThis) {
+  const { doc, profile } = parse(templateText, dom);
   const changes = [];
-  const set = (attr, value, label) => {
-    const old = profile.getAttribute(attr);
-    const v = String(value);
-    if (old !== v) changes.push(`${label}: ${old} -> ${v}`);
-    profile.setAttribute(attr, v);
-  };
 
-  // --- 1. profile attributes ---
   profile.setAttribute("name", s.name);
-  set("maxSpeed", s.maxSpeed.toFixed(1), "maxSpeed (km/h)");
-  set("defaultSpeed", s.defaultSpeed.toFixed(1), "defaultSpeed (km/h)");
-  set("sharpTurn", s.turns.sharp, "sharpTurn (s)");
-  set("slightTurn", s.turns.slight, "slightTurn (s)");
-  set("roundaboutTurn", s.turns.roundabout, "roundaboutTurn (s)");
+
+  // --- 1. plain values (attributes and existing rules) ---
+  for (const f of ALL_FIELDS) {
+    const t = f.target;
+    if (!["attr", "attrChild", "select"].includes(t.kind)) continue;
+    let v = s.values[f.id];
+    if (f.control === "toggle") v = !!v;
+    else {
+      v = Number(v);
+      if (!Number.isFinite(v)) continue;
+      if (f.min !== undefined) v = Math.max(f.min, v); // e.g. obstacles: negative = impassable
+    }
+    const old = readValue(profile, f);
+    if (typeof v === "boolean" ? v === old : Math.abs(old - v) < 1e-9) continue;
+    if (t.kind === "attr") profile.setAttribute(t.attr, fmt(f, v));
+    else if (t.kind === "attrChild") attrChild(profile, t.name).setAttribute("value", fmt(f, v));
+    else selectsFor(profile, t).forEach((e) => e.setAttribute("value", fmt(f, v)));
+    changes.push(`${describe(t)}: ${fmt(f, old)} -> ${fmt(f, v)}`);
+  }
+
+  // --- 1b. speed-limit overrides: new rules placed before the $maxspeed rules (first match wins) ---
+  const overrides = ALL_FIELDS.filter((f) => f.target.kind === "override" && Number(s.values[f.id]) > 0)
+    .sort((a, b) => (a.target.t === "surface" ? 0 : 1) - (b.target.t === "surface" ? 0 : 1)); // surfaces first
+  if (overrides.length) {
+    const speed = section(profile, ["way", "speed"]);
+    const firstLimit = children(speed).find((e) => e.nodeName === "select" && (e.getAttribute("value") || "").startsWith("$"));
+    if (!firstLimit) throw new Error("Template has no speed-limit rule");
+    speed.insertBefore(doc.createComment(" Routing Profile Creator: fixed speeds that override OSM speed limits "), firstLimit);
+    speed.insertBefore(doc.createTextNode("\n\t\t\t"), firstLimit);
+    for (const f of overrides) {
+      const kmh = String(Math.round(Number(s.values[f.id])));
+      speed.insertBefore(el(doc, "select", { value: kmh, t: f.target.t, v: f.target.v }), firstLimit);
+      speed.insertBefore(doc.createTextNode("\n\t\t\t"), firstLimit);
+      changes.push(`speed ${f.target.t}=${f.target.v}: ${kmh} km/h, overrides speed limits`);
+    }
+  }
 
   // --- 2. vehicle-specific rules ---
   // The car profile serves car, truck and motorcycle via <if param="profile_…"> blocks.
-  // A custom profile is selected as its own "Navigation type", so we make the chosen
-  // vehicle's rules unconditional and stop offering the derived profiles.
-  const derived = findChild(profile, "attribute", (e) => e.getAttribute("name") === "derivedProfiles");
+  // A custom profile is its own "Navigation type", so make the chosen vehicle's rules
+  // unconditional and stop offering derived profiles.
+  const derived = children(profile).find((e) => e.nodeName === "attribute" && e.getAttribute("name") === "derivedProfiles");
   if (derived) derived.setAttribute("value", "default");
   if (s.vehicle === "motorcycle") {
     const n = unwrapIfs(profile, "profile_motorcycle");
@@ -47,38 +133,22 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
   }
 
   // --- 3. extra in-app switches ---
-  const lastParam = lastChild(profile, "parameter");
-  const accessWay = findChild(profile, "way", (e) => e.getAttribute("attribute") === "access");
-  const obstacle = findChild(profile, "point", (e) => e.getAttribute("attribute") === "obstacle");
-
-  if (s.blockMotorroads.enabled) {
-    insertAfter(lastParam, el(doc, "parameter", {
+  if (s.values.blockMotorroads) {
+    const params = children(profile).filter((e) => e.nodeName === "parameter");
+    insertAfter(params[params.length - 1], el(doc, "parameter", {
       id: "avoid_motorroads", name: "Block motorways and motorroads",
       description: "Never use motorways or roads with motorway rules (motorroad=yes)", type: "boolean",
     }), "\t\t");
     // Rules are first-match: put the block right after the leading osmand_change rule,
     // before the generic "highway=motorway is allowed" selects.
-    const block = ifBlock(doc, "avoid_motorroads", [
+    const access = section(profile, ["way", "access"]);
+    insertAfter(children(access)[0], ifBlock(doc, "avoid_motorroads", [
       ["-1", "highway", "motorway"], ["-1", "highway", "motorway_link"], ["-1", "motorroad", "yes"],
-    ]);
-    insertAfter(firstElementChild(accessWay), block, "\t\t\t",
-      " Routing Profile Creator: hard block on motorways and motorroads ");
+    ]), "\t\t\t", " Routing Profile Creator: hard block on motorways and motorroads ");
     changes.push('new switch "Block motorways and motorroads" (avoid_motorroads)');
   }
 
-  // --- 4. traffic light routing cost ---
-  // Routing cost only (<point attribute="obstacle">); the ETA cost (obstacle_time) stays unchanged.
-  // Negative values would make every traffic light impassable in OsmAnd, so clamp at 0.
-  const sec = Math.max(0, Math.round(s.trafficLightCost));
-  const lightRule = elementChildren(obstacle).find((e) =>
-    e.nodeName === "select" && e.getAttribute("t") === "highway" && e.getAttribute("v") === "traffic_signals");
-  if (!lightRule) throw new Error("Template has no traffic light rule");
-  if (lightRule.getAttribute("value") !== String(sec)) {
-    changes.push(`traffic light routing cost (s): ${lightRule.getAttribute("value")} -> ${sec}`);
-    lightRule.setAttribute("value", String(sec));
-  }
-
-  // --- 5. header comment ---
+  // --- 4. header comment ---
   const safeName = s.name.replace(/-{2,}/g, "-"); // "--" is not allowed inside XML comments
   const header = doc.createComment(
     `\n  ${safeName}\n  Created with Routing Profile Creator (https://therealnepomuk.github.io/routing-profile-creator/)\n` +
@@ -88,30 +158,14 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
 
   let out = new dom.XMLSerializer().serializeToString(doc);
   out = out.replace(/^<\?xml[^>]*\?>\s*/, "");
-  // Text nodes can't live at document level, so put the line breaks between the
-  // leading comments and the root element back in here (only in that prefix).
+  // Text nodes can't live at document level, so restore the line breaks between the
+  // leading comments and the root element here (only in that prefix).
   const root = out.indexOf("<osmand_routing_config");
   out = out.slice(0, root).replace(/-->\s*/g, "-->\n") + out.slice(root);
   return '<?xml version="1.0" encoding="utf-8"?>\n' + out.replace(/\s*$/, "\n");
 }
 
 // ---------- DOM helpers ----------
-const ELEMENT = 1;
-
-function elementChildren(parent) {
-  return Array.from(parent.childNodes).filter((n) => n.nodeType === ELEMENT);
-}
-function firstElementChild(parent) {
-  return elementChildren(parent)[0];
-}
-function findChild(parent, tag, pred) {
-  return elementChildren(parent).find((e) => e.nodeName === tag && pred(e));
-}
-function lastChild(parent, tag) {
-  const all = elementChildren(parent).filter((e) => e.nodeName === tag);
-  return all[all.length - 1];
-}
-
 function el(doc, tag, attrs) {
   const e = doc.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
@@ -137,15 +191,6 @@ function insertAfter(ref, node, indent, comment) {
   if (comment) { add(doc.createTextNode("\n" + indent)); add(doc.createComment(comment)); }
   add(doc.createTextNode("\n" + indent));
   add(node);
-}
-
-// Insert `node` (optionally preceded by a comment) before `ref`, on its own line.
-function insertBefore(ref, node, indent, comment) {
-  const parent = ref.parentNode;
-  const doc = ref.ownerDocument;
-  if (comment) { parent.insertBefore(doc.createComment(comment), ref); parent.insertBefore(doc.createTextNode("\n" + indent), ref); }
-  parent.insertBefore(node, ref);
-  parent.insertBefore(doc.createTextNode("\n" + indent), ref);
 }
 
 // Replace every <if param="…"> with its children (makes those rules unconditional).

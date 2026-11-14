@@ -18,8 +18,26 @@
   Verified: output for the v2 settings = the private `Motorcycle_90kph_v2.xml` plus only the upstream
   changes since Nov 2025 (canonical XML comparison). Output is valid XML; special characters in
   names are escaped.
-- **Next:** test a generated profile on the iPhone (import, Navigation type, switches, a ~200 km route).
-  Then: final presets, maybe visual step illustrations in the instructions sheet.
+- Generated profile tested on the iPhone: works.
+- **UI principle (decided):** expose OsmAnd's real routing values as directly as possible, no
+  "smart" abstractions (OSM tagging differs by region, so hidden assumptions break). Compact,
+  collapsible sections (Speed, Road preference, Extra time, Switches in the app), minimal text,
+  an ⓘ next to every value with the details + "OsmAnd default" + reset. No presets.
+- The page is rendered from a schema (`js/settings.js`); OsmAnd defaults are read from the
+  template at runtime. Router facts behind the ⓘ texts (from `GeneralRouter.java`): road speed =
+  rule value (or `defaultSpeed` if none matches) clamped to [minSpeed, maxSpeed]; route choice uses
+  speed × priority; sharpTurn > 120°, slightTurn 60–120° (30–60° half), roundabout half in/half out;
+  obstacle < 0 = impassable.
+- **2026-11-14 evening: "everything" version.** All 119 values of the car profile exposed as sliders
+  (toggles for on/off), every ⓘ with a real explanation. Sections: Speed (vehicle, roads without a
+  limit, NEW speed-limit overrides), Road preference, Extra time for route choice (turns, stops,
+  barriers, changing road type), Arrival time (obstacle_time), Allowed roads, Short way mode,
+  Switches in the app. Speed-limit overrides = new rules inserted before the `$maxspeed` rules.
+  Left out on purpose: GPX approximation params, heuristicCoefficient, onewayAware/restrictionsAware.
+- **Next (user, with fresh mind):** review on the phone, decide grouping and what to cut.
+  Candidates: barrier slider range 0–600 s (fiddly), paths/footways/steps in Allowed roads,
+  Short way mode, Changing road type. Later: new rules beyond the car profile (gradient,
+  smoothness), each checked against OsmAnd's map data first. Add a GPLv3 `LICENSE` before promoting.
 
 ## iOS import findings (tested 2026-11-14, iPhone 17)
 

@@ -1,99 +1,142 @@
 // Routing Profile Creator — page logic
-import { START, OSMAND_DEFAULTS, turnsFromSharp, autoName, fileNameFor } from "./settings.js";
-import { buildOsmandXml, TEMPLATE_URL } from "./exporters/osmand.js";
+import { SECTIONS, ALL_FIELDS, autoName, fileNameFor } from "./settings.js";
+import { buildOsmandXml, readDefaults, TEMPLATE_URL } from "./exporters/osmand.js";
 
 const $ = (id) => document.getElementById(id);
-
 const el = {
-  maxSpeed: $("maxSpeed"), speedValue: $("speedValue"), defaultSpeed: $("defaultSpeed"),
-  turns: $("turns"), turnValue: $("turnValue"), turnDetail: $("turnDetail"),
-  lights: $("lights"), lightValue: $("lightValue"),
-  slight: $("slightTurn"), round: $("roundaboutTurn"),
-  motorroads: $("optMotorroads"), name: $("profileName"),
+  sections: $("sections"), name: $("profileName"),
   download: $("downloadBtn"), status: $("status"),
   sheet: $("sheet"), scrim: $("scrim"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
 };
 
+const VEHICLE = "motorcycle";
 let template = null;
+let defaults = {};
+const values = {};
 let nameEdited = false;
-const vehicle = START.vehicle;
 
-// ---------- settings from the form ----------
-const num = (input, fallback, min = 0, max = 1000) => {
-  const v = parseFloat(input.value);
-  return Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
-};
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function fmtVal(f, v) {
+  if (f.control === "toggle") return v ? "On" : "Off";
+  if (f.offAtZero && Number(v) === 0) return f.offAtZero;
+  const n = +Number(v).toFixed(2);
+  return f.unit === "×" ? `${n}×` : `${n} ${f.unit}`;
+}
+const isChanged = (f) => defaults[f.id] !== undefined && values[f.id] !== defaults[f.id];
 
-function readSettings() {
-  const s = {
-    vehicle,
-    maxSpeed: +el.maxSpeed.value,
-    defaultSpeed: num(el.defaultSpeed, START.defaultSpeed, 5, 200),
-    turns: { sharp: +el.turns.value, slight: num(el.slight, 8, 0, 600), roundabout: num(el.round, 5, 0, 600) },
-    trafficLightCost: +el.lights.value,
-    blockMotorroads: { enabled: el.motorroads.checked },
-  };
-  s.name = el.name.value.trim() || autoName(s);
-  return s;
+// ---------- rendering ----------
+let uid = 0;
+function infoBlock(id, html, cls) {
+  return `<div class="${cls}" id="${id}" hidden>${html}</div>`;
+}
+function infoButton(target, label) {
+  return `<button type="button" class="info-btn" aria-expanded="false" aria-controls="${target}" aria-label="About ${esc(label)}">i</button>`;
 }
 
-// ---------- UI sync ----------
+function renderField(f) {
+  const fid = "f-" + f.id, iid = "i-" + f.id;
+  let end = "", below = "";
+  if (f.control === "slider") {
+    end = `<output class="f-val" for="${fid}" id="v-${f.id}"></output>`;
+    below = `<input class="range" id="${fid}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" aria-label="${esc(f.label)}">`;
+  } else if (f.control === "toggle") {
+    end = `<input class="switch" id="${fid}" type="checkbox">`;
+  }
+  const info = (f.info ? `<p>${esc(f.info)}</p>` : "") +
+    `<p class="f-default"><span id="d-${f.id}"></span><button type="button" class="link-btn" data-reset="${f.id}">Use default</button></p>`;
+  return `<div class="f" data-field="${f.id}">
+    <div class="f-row"><label class="f-label" for="${fid}">${esc(f.label)}</label>${infoButton(iid, f.label)}<span class="f-end">${end}</span></div>
+    ${below}${infoBlock(iid, info, "f-info")}
+  </div>`;
+}
+
+function renderGroup(g) {
+  const gid = "g-" + (++uid);
+  const head = g.title || g.info
+    ? `<div class="group-head">${g.title ? `<h3>${esc(g.title)}</h3>` : ""}${g.info ? infoButton(gid, g.title || "this section") : ""}${g.collapsed ? '<span class="chev"></span>' : ""}</div>`
+    : "";
+  const info = g.info ? infoBlock(gid, `<p>${esc(g.info)}</p>`, "group-info") : "";
+  const fields = g.fields.map(renderField).join("");
+  if (g.collapsed) return `<details class="group"><summary>${head}</summary>${info}${fields}</details>`;
+  return `<div class="group">${head}${info}${fields}</div>`;
+}
+
+function render() {
+  el.sections.innerHTML = SECTIONS.map((s, i) => `
+    <details class="panel glass sec" data-section="${s.id}"${i === 0 ? " open" : ""}>
+      <summary><span class="sec-title">${esc(s.title)}</span><span class="sec-sum" id="sum-${s.id}"></span><span class="chev"></span></summary>
+      <div class="sec-body">${s.groups.map(renderGroup).join("")}</div>
+    </details>`).join("");
+}
+
+// ---------- state ↔ UI ----------
 function setFill(range) {
   const pct = ((range.value - range.min) / (range.max - range.min)) * 100;
   range.style.setProperty("--fill", pct + "%");
 }
 
-function turnText() {
-  return `Sharp turns. Slight turns get ${num(el.slight, 0)} s, roundabouts ${num(el.round, 0)} s.`;
+function showField(f) {
+  const input = $("f-" + f.id);
+  if (f.control === "toggle") input.checked = !!values[f.id];
+  else input.value = values[f.id];
+  if (f.control === "slider") { $("v-" + f.id).textContent = fmtVal(f, values[f.id]); setFill(input); }
+  input.closest(".f").classList.toggle("changed", isChanged(f));
+  const d = $("d-" + f.id);
+  if (d) d.textContent = defaults[f.id] === undefined ? "" : `OsmAnd default: ${fmtVal(f, defaults[f.id])}`;
 }
 
-function sync() {
-  el.speedValue.textContent = el.maxSpeed.value;
-  el.turnValue.textContent = el.turns.value;
-  el.lightValue.textContent = el.lights.value;
-  el.turnDetail.textContent = turnText();
-  [el.maxSpeed, el.turns, el.lights].forEach(setFill);
-  if (!nameEdited) {
-    el.name.value = autoName({ vehicle, maxSpeed: +el.maxSpeed.value, blockMotorroads: { enabled: el.motorroads.checked } });
+function updateSummaries() {
+  for (const s of SECTIONS) {
+    const fields = s.groups.flatMap((g) => g.fields);
+    const n = fields.filter(isChanged).length;
+    const sum = $("sum-" + s.id);
+    sum.textContent = s.id === "speed" ? `max ${values.maxSpeed} km/h` : (n ? `${n} changed` : "OsmAnd default");
+    sum.classList.toggle("changed", n > 0);
   }
+  if (!nameEdited) el.name.value = autoName(values);
 }
 
-function onTurnSlider() {
-  const t = turnsFromSharp(+el.turns.value);
-  el.slight.value = t.slight;
-  el.round.value = t.roundabout;
-  sync();
+function refreshAll() {
+  ALL_FIELDS.forEach(showField);
+  updateSummaries();
 }
 
-function applyStart() {
-  el.maxSpeed.value = START.maxSpeed;
-  el.defaultSpeed.value = START.defaultSpeed;
-  el.turns.value = START.turns.sharp;
-  el.slight.value = START.turns.slight;
-  el.round.value = START.turns.roundabout;
-  el.lights.value = START.trafficLightCost;
-  el.motorroads.checked = START.blockMotorroads.enabled;
-  sync();
-}
-
-el.maxSpeed.addEventListener("input", sync);
-el.turns.addEventListener("input", onTurnSlider);
-el.lights.addEventListener("input", sync);
-el.slight.addEventListener("input", sync);
-el.round.addEventListener("input", sync);
-el.motorroads.addEventListener("change", sync);
-el.name.addEventListener("input", () => { nameEdited = el.name.value.trim() !== ""; });
-
-document.querySelectorAll("[data-reset]").forEach((b) => b.addEventListener("click", () => {
-  if (b.dataset.reset === "turns") {
-    el.turns.value = OSMAND_DEFAULTS.turns.sharp;
-    el.slight.value = OSMAND_DEFAULTS.turns.slight;
-    el.round.value = OSMAND_DEFAULTS.turns.roundabout;
-  } else if (b.dataset.reset === "lights") {
-    el.lights.value = OSMAND_DEFAULTS.trafficLightCost;
+function bind() {
+  for (const f of ALL_FIELDS) {
+    const input = $("f-" + f.id);
+    const onChange = () => {
+      if (f.control === "toggle") values[f.id] = input.checked;
+      else {
+        const v = parseFloat(input.value);
+        if (!Number.isFinite(v)) return;
+        values[f.id] = Math.min(f.max, Math.max(f.min, v));
+      }
+      showField(f);
+      updateSummaries();
+    };
+    input.addEventListener(f.control === "toggle" ? "change" : "input", onChange);
   }
-  sync();
-}));
+  el.sections.addEventListener("click", (e) => {
+    const info = e.target.closest(".info-btn");
+    if (info) {
+      e.preventDefault(); // inside <summary> it would toggle the group
+      const box = $(info.getAttribute("aria-controls"));
+      const open = info.getAttribute("aria-expanded") !== "true";
+      info.setAttribute("aria-expanded", String(open));
+      box.hidden = !open;
+      if (open && box.closest("details.group:not([open])")) box.closest("details.group").open = true;
+      return;
+    }
+    const reset = e.target.closest("[data-reset]");
+    if (reset) {
+      const f = ALL_FIELDS.find((x) => x.id === reset.dataset.reset);
+      values[f.id] = defaults[f.id];
+      showField(f);
+      updateSummaries();
+    }
+  });
+  el.name.addEventListener("input", () => { nameEdited = el.name.value.trim() !== ""; });
+}
 
 // ---------- platform & instructions ----------
 function platform() {
@@ -102,8 +145,6 @@ function platform() {
   if (/Android/.test(ua)) return "android";
   return "desktop";
 }
-
-const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const selectStep = (name) =>
   `<li>In OsmAnd open <b>Menu → Settings</b>, pick your profile (e.g. <b>Motorcycle</b>), then <b>Navigation settings → Navigation type</b> and choose <b>${esc(name)}</b>.</li>`;
@@ -157,15 +198,15 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !el.shee
 // ---------- download ----------
 function download() {
   if (!template) return;
-  const s = readSettings();
+  const name = el.name.value.trim() || autoName(values);
   let xml;
   try {
-    xml = buildOsmandXml(s, template);
+    xml = buildOsmandXml({ name, vehicle: VEHICLE, values }, template);
   } catch (err) {
     el.status.textContent = "Couldn't create the file: " + err.message;
     return;
   }
-  const fileName = fileNameFor(s.name);
+  const fileName = fileNameFor(name);
   const url = URL.createObjectURL(new Blob([xml], { type: "application/xml" }));
   const a = document.createElement("a");
   a.href = url;
@@ -174,16 +215,24 @@ function download() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-  openSheet(s.name, fileName);
+  openSheet(name, fileName);
 }
 el.download.addEventListener("click", download);
 
 // ---------- start ----------
-// Load the template up front so the download happens directly in the tap (iOS needs that).
+// The template is loaded up front: it provides the OsmAnd defaults, and the download
+// must happen directly inside the tap (iOS needs that).
+render();
+bind();
 el.download.disabled = true;
 fetch(TEMPLATE_URL)
   .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
-  .then((t) => { template = t; el.download.disabled = false; el.status.textContent = ""; })
-  .catch(() => { el.status.textContent = "Couldn't load the base profile. Check your connection and reload the page."; });
-
-applyStart();
+  .then((t) => {
+    template = t;
+    defaults = readDefaults(t);
+    for (const f of ALL_FIELDS) values[f.id] = f.start !== undefined ? f.start : defaults[f.id];
+    refreshAll();
+    el.download.disabled = false;
+    el.status.textContent = "";
+  })
+  .catch((err) => { el.status.textContent = "Couldn't load OsmAnd's base profile (" + err.message + "). Check your connection and reload the page."; });
