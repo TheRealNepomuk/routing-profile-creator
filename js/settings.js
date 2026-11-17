@@ -75,14 +75,13 @@ const SURFACE = {
 // A field can carry a `box`: a checkbox field rendered under its slider ("Ignore speed limits",
 // "Block completely"). A `card` bundles several fields for one road type or surface.
 
-const IGNORE_INFO = "Tick \"Ignore speed limits\" to use your speed even where OSM has a speed limit, e.g. for gravel roads with a 100 limit that you'd ride at 40.\n\n"
-  + "Careful: it then applies to every road of that type, including stretches through towns with a 30 or 50 limit, so routes through towns look faster than they are. Your max cruising speed still caps it.";
-const BLOCK_INFO = "Tick it and the route never passes one, even where it's tagged as open for you.";
+const IGNORE_INFO = "Normally OsmAnd uses the posted speed limit where there is one, and your speed only where there isn't. Tick this to use your speed on every road of this type.\n\nCareful: that includes stretches through towns with a 30 or 50 limit, so routes through towns look faster than they are.";
+const BLOCK_INFO = "The route never passes one, even where it's tagged as open for you.";
 const limitBox = (id) => ({ id: "over_" + id, of: "speed_" + id, label: "Ignore speed limits", control: "toggle", target: { kind: "override" }, info: IGNORE_INFO });
 const blockBox = (id, pairs) => ({ id: "block_" + id, of: "obst_" + id, label: "Block completely", control: "toggle", target: { kind: "block", pairs }, info: BLOCK_INFO });
-const RAMP_PRIO_INFO = "Usually set a bit lower than the road itself. At big junctions, ramps often run right alongside the main road, and a lower value keeps the route on the main road there instead of drifting onto a ramp and back. It doesn't stop the route from leaving where it should.\n\nTo keep the route from hopping on and off main roads in general, use Switching road type.";
-const SPOTTY = "Use with caution: surface data in OSM is often spotty and inconsistent. Many roads have no surface tag at all, and the same kind of road gets tagged differently from place to place.";
-const PRIO_INFO = "Preference: how much the route planner likes these roads. It treats them as if they were this many times as fast. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.";
+const RAMP_PRIO_INFO = "Usually a bit lower than the road itself. At big junctions, ramps often run right alongside the main road, and a lower value keeps the route on the main road.\n\nTo stop the route hopping on and off main roads in general, use Switching road type.";
+const SPOTTY = "Use with caution: this data is spotty and inconsistent between regions.";
+const PRIO_INFO = "- Preference: how much the route planner likes these roads. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.";
 
 const card = (id, label, info, fields) => ({ id: "card_" + id, card: true, label, info, fields });
 
@@ -111,29 +110,22 @@ const H = (v) => [["highway", v]];
 const MOTORWAY_RAMP_NOTE = "OsmAnd always uses this speed on motorway ramps, even if they have a speed limit.";
 const TRUNK_RAMP_NOTE = "OsmAnd uses this speed on trunk ramps even if they have a speed limit, except in towns (limit 50 or less).";
 
-// Order: three sections by topic (vehicle, road types, turns and obstacles). Inside each section, and
-// inside each group, the common and useful settings come first and the rare ones last.
+// Order: two sections by topic (road types, turns and obstacles). Inside each section, and inside
+// each group, the common and useful settings come first and the rare ones last.
 export const SECTIONS = [
-  {
-    id: "vehicle", title: "Vehicle settings",
-    groups: [
-      {
-        fields: [
-          slider("maxSpeed", "Max cruising speed", KMH, 30, 150, 5, { kind: "attr", attr: "maxSpeed" },
-            "Even if a road allows a higher speed, the route is calculated with this speed at most. Arrival times use it too."),
-          slider("minSpeed", "Minimum speed", KMH, 1, 60, 1, { kind: "attr", attr: "minSpeed" },
-            "Every road is calculated with at least this speed. A road that would be slower, e.g. a living street at walking pace, counts as this fast.\n\nIt doesn't avoid slow roads, it makes them look faster than they are. A lower value makes slow roads count as slow. To avoid roads, use the preferences under Road type preferences."),
-        ],
-      },
-    ],
-  },
   {
     id: "roads", title: "Road type preferences",
     groups: [
       {
         title: "Road types",
-        info: "Speed: where OSM has a speed limit for a road, OsmAnd calculates with the limit. Where it has none, it uses your speed for the road type. In many areas that's most minor roads. Your max cruising speed caps all of them. \"Ignore speed limits\" changes that per road type, see its ⓘ.\n\n" + PRIO_INFO,
+        info: "- Speed: used where OSM has no speed limit. Otherwise OsmAnd uses the limit.\n- Preference: how much the route planner likes these roads. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.\n- Max cruising speed and minimum speed (under All roads) limit both: no road counts as faster than the max, whatever its preference.",
         fields: [
+          card("all", "All roads", "Limits for the speeds of every road type below.", [
+            slider("maxSpeed", "Max cruising speed", KMH, 30, 150, 5, { kind: "attr", attr: "maxSpeed" },
+              "The fastest any road is calculated with. Arrival times use it too.\n\n- It also caps preferences: at 90, a motorway, a trunk road and a fast primary road all count as 90, whatever their preference.", { sumPrefix: "max " }),
+            slider("minSpeed", "Minimum speed", KMH, 1, 60, 1, { kind: "attr", attr: "minSpeed" },
+              "The slowest any road is calculated with. Arrival times use it too.\n\n- Example: tracks are set to 15 km/h, but with a minimum of 20 they count as 20. To make a lower road speed count, lower the minimum too.\n- It doesn't avoid slow roads. To avoid roads, lower their preference.", { sumPrefix: "min " }),
+          ]),
           card("motorway", "Motorway", withRamp("motorway"), [
             speed("motorway", H("motorway")), prio("motorway", H("motorway")),
             speed("motorway_link", H("motorway_link"), { label: "Ramp speed", note: MOTORWAY_RAMP_NOTE, box: false }),
@@ -172,19 +164,18 @@ export const SECTIONS = [
       },
       {
         title: "Motorway switch",
-        info: "Adds a switch to OsmAnd under Route parameters → Avoid roads, next to OsmAnd's own (toll, unpaved, ferries, …). Turn it on per trip.",
+        info: "Adds a switch to OsmAnd under Route parameters \u2192 Avoid roads. Turn it on per trip.",
         fields: [
           {
             id: "blockMotorroads", label: "Block motorways and motorroads", control: "toggle",
             target: { kind: "custom" },
-            info: "When the switch is on, motorways, their ramps and roads tagged motorroad=yes (motorway rules without being a motorway) are never used.",
+            info: "When it's on, motorways, their ramps and roads tagged motorroad=yes are never used.",
           },
         ],
       },
       {
         title: "Surfaces", collapsed: true,
-        info: "A surface setting comes before the road type: a gravel tertiary road uses the gravel values, not the tertiary ones. Off = the road type's value is used. OsmAnd's car profile only has preferences for gravel and unpaved, and no surface speeds, so the rest are off by default.\n\n"
-          + "Speed: used where OSM has no speed limit, unless you tick \"Ignore speed limits\".\n\n" + PRIO_INFO + "\n\n" + SPOTTY,
+        info: "Comes before the road type: a gravel tertiary road uses the gravel values. Off = the road type's value is used.\n\n- Speed: used where OSM has no speed limit.\n- Preference: how much the route planner likes these roads. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.\n\n" + SPOTTY,
         fields: [
           card("gravel", "Gravel", SURFACE.gravel, [surfaceSpeed("gravel"), prio("gravel", [["surface", "gravel"]])]),
           card("unpaved", "Unpaved", SURFACE.unpaved, [surfaceSpeed("unpaved"), prio("unpaved", [["surface", "unpaved"]])]),
@@ -196,7 +187,7 @@ export const SECTIONS = [
       },
       {
         title: "Road condition", collapsed: true,
-        info: PRIO_INFO + "\n\nThese come before the road types: a rough primary road gets the value set here, not the primary one.\n\n" + SPOTTY,
+        info: "Comes before the road type: a rough primary road uses these values.\n\n- Preference: how much the route planner likes these roads. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.\n\n" + SPOTTY,
         fields: [
           prio("smooth_bad", [["smoothness", "bad"]], { label: "Smoothness: bad", info: "Roads tagged smoothness=bad: rough, but fine for robust bikes and cars." }),
           prio("smooth_very_bad", [["smoothness", "very_bad"]], { label: "Smoothness: very bad", info: "Roads tagged smoothness=very_bad: needs high clearance." }),
@@ -208,7 +199,7 @@ export const SECTIONS = [
       },
       {
         title: "Paths, cycleways and steps", collapsed: true,
-        info: "Whether the route may use these at all. They're off in OsmAnd's car profile. They have no speed or preference of their own, so the values under Everything else are used on them. Check your local rules before allowing them.",
+        info: "Whether the route may use them at all.\n\n- They have no speed or preference of their own, so the values under Everything else are used.\n- Check your local rules before allowing them.",
         fields: [
           allowed("path", "highway", "path", { label: "Paths", info: "Multi-use paths (highway=path)." }),
           allowed("cycleway", "highway", "cycleway", { label: "Cycleways", info: "Paths meant for bicycles." }),
@@ -226,7 +217,7 @@ export const SECTIONS = [
       },
       {
         title: "Switching road type", collapsed: true,
-        info: "Keeps the route from hopping between kinds of road, e.g. leaving a main road for a few hundred metres of side street and then getting back on.\n\nEach road type below has a value, in seconds. When the route changes to a road with a different value, half the difference is added. Primary (50) → tertiary (130) adds 40 s, and getting back onto the primary adds another 40 s. Roads with the same value, e.g. two primary roads, cost nothing.",
+        info: "Keeps the route from hopping between road types, e.g. leaving a main road for a short stretch of side street and getting back on.\n\n- Each road type has a value in seconds.\n- Changing to a road with a different value adds half the difference.\n- Example: primary (50) \u2192 tertiary (130) adds 40 s, and back onto the primary another 40 s.",
         fields: [
           trans("motorway", "Motorway", ROAD.motorway, H("motorway")),
           trans("trunk", "Trunk road and ramp", withRamp("trunk"), [...H("trunk"), ...H("trunk_link")]),
@@ -245,7 +236,7 @@ export const SECTIONS = [
       },
       {
         title: "Ferries and car trains", collapsed: true,
-        info: "Speed: the speed a crossing or journey is calculated with.\n\n" + PRIO_INFO,
+        info: "- Speed: the speed a crossing or journey is calculated with.\n- Preference: how much the route planner likes these roads. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.",
         fields: [
           card("ferry", "Ferries", ROAD.ferry + " OsmAnd also has its own \"Avoid ferries\" switch.", [
             allowed("ferry", "route", "ferry"),
@@ -282,7 +273,7 @@ export const SECTIONS = [
       },
       {
         title: "Traffic lights, signs and fords",
-        info: "Seconds added when the route passes a point with this tag. 0 = ignore.",
+        info: "Seconds added for each one the route passes. 0 = ignore.",
         fields: [
           obstacle("traffic_signals", "Traffic light", "Traffic lights.", H("traffic_signals"), { block: false }),
           obstacle("stop", "Stop sign", "Stop signs.", H("stop"), { block: false }),
@@ -294,7 +285,7 @@ export const SECTIONS = [
       },
       {
         title: "Barriers", collapsed: true,
-        info: "Seconds added for each barrier of this kind the route passes. 0 = ignore. Barriers not listed here, or with access tags forbidding you, block the road anyway.",
+        info: "- Seconds added for each one the route passes. 0 = ignore.\n- Barriers not listed here, or closed to you by their tags, block the road anyway.",
         fields: [
           obstacle("toll_booth", "Toll booth", "Toll booths, where you stop to pay.", [["barrier", "toll_booth"]],
             { note: " OsmAnd's own \"Avoid toll roads\" switch avoids toll roads altogether." }),

@@ -1,6 +1,5 @@
 // Routing Profile Creator — page logic
 import { SECTIONS, ALL_FIELDS, flatFields, autoName, fileNameFor } from "./settings.js";
-import { applyLayout } from "./layout.js";
 import { buildOsmandXml, readDefaults, TEMPLATE_URL } from "./exporters/osmand.js";
 
 const $ = (id) => document.getElementById(id);
@@ -16,7 +15,7 @@ let template = null;
 let defaults = {};
 const values = {};
 let nameEdited = false;
-let sections = SECTIONS; // the layout editor (dev/editor.html) can replace this live
+const sections = SECTIONS;
 const shown = () => sections.flatMap((s) => s.groups.flatMap((g) => flatFields(g.fields)));
 const cards = () => sections.flatMap((s) => s.groups.flatMap((g) => g.fields.filter((f) => f.card)));
 
@@ -27,7 +26,13 @@ function fmtVal(f, v) {
   const n = +Number(v).toFixed(2);
   return f.unit === "×" ? `${n}×` : `${n} ${f.unit}`;
 }
-const paras = (text) => text.split("\n\n").map((t) => `<p>${esc(t)}</p>`).join("");
+// Info texts: a blank line starts a new paragraph; a paragraph of "- " lines becomes a bullet list.
+const paras = (text) => text.split("\n\n").map((t) => {
+  const lines = t.split("\n");
+  return lines.every((l) => l.startsWith("- "))
+    ? `<ul>${lines.map((l) => `<li>${esc(l.slice(2))}</li>`).join("")}</ul>`
+    : `<p>${esc(t)}</p>`;
+}).join("");
 const isChanged = (f) => defaults[f.id] !== undefined && values[f.id] !== defaults[f.id];
 
 // ---------- rendering ----------
@@ -70,7 +75,38 @@ function renderCard(c) {
   </details>`;
 }
 
-// Short summary of a card's values, e.g. "80 km/h · 1.2× · not allowed".
+// ---------- relations between settings ----------
+// Nothing moves by itself: the page only shows what OsmAnd will make of the values.
+// - Road speeds outside [minimum speed, max cruising speed] are clamped by OsmAnd: grey zones on
+//   the track, value greyed out.
+// - Settings that have no effect are dimmed: a blocked obstacle's seconds, a not-allowed road's
+//   speed and preference, the "Ignore speed limits" box of a surface speed that is Off.
+const isRoadSpeed = (f) => f.control === "slider" && f.unit === "km/h" && f.id !== "maxSpeed" && f.id !== "minSpeed";
+const isClamped = (f) => {
+  const v = Number(values[f.id]);
+  return !(f.offAtZero && v === 0) && (v > values.maxSpeed || v < values.minSpeed);
+};
+const pct = (f, v) => Math.min(100, Math.max(0, ((v - f.min) / (f.max - f.min)) * 100));
+const fieldEl = (id) => $("f-" + id).closest(".f");
+
+function updateRelations() {
+  for (const f of shown()) {
+    if (isRoadSpeed(f)) {
+      const input = $("f-" + f.id);
+      input.style.setProperty("--lo", pct(f, values.minSpeed) + "%");
+      input.style.setProperty("--hi", pct(f, values.maxSpeed) + "%");
+      fieldEl(f.id).classList.toggle("clamped", isClamped(f));
+    }
+    if (f.target.kind === "block") fieldEl(f.of).classList.toggle("inactive", !!values[f.id]);
+    if (f.offAtZero && f.box) fieldEl(f.id).classList.toggle("box-off", Number(values[f.id]) === 0);
+  }
+  for (const c of cards()) {
+    const allow = c.fields.find((f) => f.id.startsWith("allow_"));
+    if (allow) for (const f of c.fields) if (f !== allow) fieldEl(f.id).classList.toggle("off", !values[allow.id]);
+  }
+}
+
+// Short summary of a card's values, e.g. "80 km/h · 1.2× · not allowed" (HTML: clamped speeds greyed).
 function cardSummary(c) {
   const parts = [];
   for (const f of flatFields(c.fields)) {
@@ -79,7 +115,10 @@ function cardSummary(c) {
     if (f.target.kind === "override") { if (v) parts.push("no limits"); }
     else if (f.target.kind === "block") { if (v) parts.push("blocked"); }
     else if (f.control === "toggle") { if (!v) parts.push("not allowed"); }
-    else if (!(f.offAtZero && Number(v) === 0) && f.unit !== "s") parts.push(fmtVal(f, v));
+    else if (!(f.offAtZero && Number(v) === 0) && f.unit !== "s") {
+      const t = esc((f.sumPrefix || "") + fmtVal(f, v));
+      parts.push(isRoadSpeed(f) && isClamped(f) ? `<span class="dim">${t}</span>` : t);
+    }
   }
   return parts.join(" · ") || "Off";
 }
@@ -124,14 +163,15 @@ function updateSummaries() {
     const fields = s.groups.flatMap((g) => flatFields(g.fields));
     const n = fields.filter(isChanged).length;
     const sum = $("sum-" + s.id);
-    sum.textContent = s.id === "vehicle" ? `${values.maxSpeed} km/h` : (n ? `${n} changed` : "OsmAnd default");
+    sum.textContent = n ? `${n} changed` : "OsmAnd default";
     sum.classList.toggle("changed", n > 0);
   }
   for (const c of cards()) {
     const sum = $("cs-" + c.id);
-    sum.textContent = cardSummary(c);
+    sum.innerHTML = cardSummary(c);
     sum.classList.toggle("changed", flatFields(c.fields).some(isChanged));
   }
+  updateRelations();
   if (!nameEdited) el.name.value = autoName(values);
 }
 
@@ -265,22 +305,43 @@ el.download.addEventListener("click", download);
 
 // ---------- help ----------
 const HELP = `
-  <p class="lead">A detailed explanation and guide is coming here soon.</p>`;
-el.help.addEventListener("click", () => openSheet("How does this work?", HELP));
+  <div class="help">
+    <section class="help-card">
+      <h3>What's a routing file?</h3>
+      <p>The rules OsmAnd uses to calculate a route: how fast each road is, which roads to prefer or avoid, and how much a turn or a traffic light costs.</p>
+    </section>
 
-// ---------- layout preview (only inside dev/editor.html) ----------
-if (new URLSearchParams(location.search).has("preview")) {
-  window.addEventListener("message", (e) => {
-    if (e.origin !== location.origin || e.data?.type !== "layout") return;
-    const open = new Set([...el.sections.querySelectorAll("details.sec[open]")].map((d) => d.dataset.section));
-    sections = applyLayout(e.data.layout, SECTIONS, ALL_FIELDS);
-    render();
-    bindInputs();
-    el.sections.querySelectorAll("details.sec").forEach((d) => { d.open = open.has(d.dataset.section); });
-    if (template) refreshAll();
-  });
-  window.parent.postMessage({ type: "preview-ready" }, location.origin);
-}
+    <section class="help-card">
+      <h3>Why change it?</h3>
+      <p>OsmAnd's built-in profiles are made for everyone. Here you can tune single values to your liking, e.g. prefer secondary roads, avoid gravel or skip motorways.</p>
+    </section>
+
+    <section class="help-card">
+      <h3>Getting it into OsmAnd</h3>
+      <ol class="steps">
+        <li>Tap <b>Download XML file</b>.</li>
+        <li>Open the file with OsmAnd (on iPhone: <b>Share → OsmAnd</b>).</li>
+        <li>Pick it as <b>Navigation type</b> in your profile's <a href="https://osmand.net/docs/user/navigation/guidance/navigation-settings/#navigation-type" target="_blank" rel="noopener">navigation settings</a>.</li>
+      </ol>
+    </section>
+
+    <section class="help-card help-warn">
+      <h3>It's only as good as the map</h3>
+      <p>Everything here relies on OpenStreetMap data, and that varies a lot between regions. Speed limits are often missing, and details like road surface or smoothness are spotty. Check the route before you rely on it.</p>
+    </section>
+
+    <section class="help-card">
+      <h3>Examples</h3>
+      <dl class="recipes">
+        <dt>More country roads</dt><dd>Road types → Secondary and Tertiary: preference 1.2. Motorway: 0.5.</dd>
+        <dt>No motorways at all</dt><dd>Turn on the Motorway switch. You get a switch in OsmAnd to use per trip.</dd>
+        <dt>Stay off gravel</dt><dd>Surfaces → Gravel and Unpaved: preference 0.2. Track: turn off Allowed.</dd>
+        <dt>Fewer traffic lights</dt><dd>Turns, stops and obstacles → Traffic light: 40 s.</dd>
+        <dt>Never through a ford</dt><dd>Ford: tick Block completely.</dd>
+      </dl>
+    </section>
+  </div>`;
+el.help.addEventListener("click", () => openSheet("How does this work?", HELP));
 
 // ---------- start ----------
 // The template is loaded up front: it provides the OsmAnd defaults, and the download

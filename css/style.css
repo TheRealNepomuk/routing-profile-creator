@@ -6,6 +6,8 @@
   --road-major: #2b3e63;     /* major roads */
   --amber: #ff8f00;          /* OsmAnd orange (osmand_orange in the app): route + primary action */
   --amber-deep: #e68200;     /* osmand_orange_dark */
+  --blue: #0a84ff;           /* iOS system blue (dark mode): secondary actions */
+  --off-zone: rgba(8, 12, 24, 0.72); /* slider range that has no effect */
   --ink: #f2f5fb;            /* primary text */
   --ink-2: rgba(226, 233, 248, 0.66);  /* secondary text */
   --ink-3: rgba(226, 233, 248, 0.42);
@@ -101,17 +103,18 @@ body {
 }
 .intro p { margin: 0; color: var(--ink-2); max-width: 34ch; }
 .btn-secondary {
+  margin-top: 8px;
   min-height: 44px;
   padding: 0 18px;
   border-radius: 999px;
-  border: 1px solid var(--glass-edge);
-  background: var(--glass);
-  color: var(--ink);
-  font: 500 15px var(--font);
+  border: 1px solid rgba(10, 132, 255, 0.45);
+  background: rgba(10, 132, 255, 0.18);
+  color: #4da3ff;
+  font: 600 15px var(--font);
   cursor: pointer;
-  box-shadow: inset 0 1px 0 var(--glass-shine);
-  transition: transform .12s;
+  transition: transform .12s, background .12s;
 }
+.btn-secondary:hover { background: rgba(10, 132, 255, 0.26); }
 .btn-secondary:active { transform: scale(0.97); }
 
 /* ---------- panels ---------- */
@@ -188,6 +191,12 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .f-limit .check { width: 18px; height: 18px; margin: 0; accent-color: var(--amber); }
 .f-limit.changed { color: var(--amber); }
 
+/* settings OsmAnd ignores with the current values */
+.f.clamped .f-val { color: var(--ink-3) !important; }
+.f.inactive > .f-row, .f.inactive > .range,
+.f.off > *, .f.box-off > .f-box { opacity: 0.35; }
+.card-sum .dim { color: var(--ink-3); }
+
 .num {
   width: 74px; height: 36px; padding: 0 10px;
   border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
@@ -212,7 +221,10 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
   font-size: 14px; line-height: 1.45; color: var(--ink-2);
 }
 .f-info p, .group-info p { margin: 0; }
-.f-info p + p, .group-info p + p { margin-top: 6px; }
+.f-info ul, .group-info ul { margin: 0; padding-left: 18px; }
+.f-info > :not(:first-child), .group-info > :not(:first-child) { margin-top: 8px; }
+.f-info li + li, .group-info li + li { margin-top: 4px; }
+.f-info li::marker, .group-info li::marker { color: var(--ink-3); }
 .sec-intro { margin: 0 0 4px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
 .f-info .f-default { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--ink-3); }
 .f-info code, .group-info code { font-size: 13px; color: var(--ink); }
@@ -236,13 +248,22 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
   display: block;
   background: transparent;
   --fill: 50%;
+  --lo: 0%;    /* road speeds: below minimum speed has no effect */
+  --hi: 100%;  /* road speeds: above max cruising speed has no effect */
 }
 .range::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--amber) var(--fill), rgba(255,255,255,0.14) var(--fill));
+  background:
+    linear-gradient(90deg, var(--off-zone) var(--lo), transparent var(--lo), transparent var(--hi), var(--off-zone) var(--hi)),
+    linear-gradient(90deg, var(--amber) var(--fill), rgba(255,255,255,0.14) var(--fill));
 }
-.range::-moz-range-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.14); }
+.range::-moz-range-track {
+  height: 8px; border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--off-zone) var(--lo), transparent var(--lo), transparent var(--hi), var(--off-zone) var(--hi)),
+    rgba(255,255,255,0.14);
+}
 .range::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--amber); }
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -375,6 +396,17 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .grabber { width: 40px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.3); margin: 0 auto 16px; }
 .sheet h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -0.02em; }
 .sheet .lead { margin: 0 0 14px; color: var(--ink-2); }
+.help { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 18px; }
+.help-card { padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+.help-card h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
+.help-card p { margin: 0; font-size: 15px; color: var(--ink-2); }
+.help-card .steps { margin: 0; font-size: 15px; }
+.help-card a { color: var(--amber); }
+.help-warn { background: rgba(255, 143, 0, 0.10); border-color: rgba(255, 143, 0, 0.28); }
+.recipes { margin: 0; font-size: 15px; }
+.recipes dt { font-weight: 600; margin-top: 10px; }
+.recipes dt:first-child { margin-top: 0; }
+.recipes dd { margin: 2px 0 0; color: var(--ink-2); }
 .steps { margin: 0 0 18px; padding: 0; list-style: none; counter-reset: step; }
 .steps li {
   counter-increment: step;
