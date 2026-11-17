@@ -163,17 +163,6 @@ export const SECTIONS = [
         ],
       },
       {
-        title: "Motorway switch",
-        info: "Adds a switch to OsmAnd under Route parameters \u2192 Avoid roads. Turn it on per trip.",
-        fields: [
-          {
-            id: "blockMotorroads", label: "Block motorways and motorroads", control: "toggle",
-            target: { kind: "custom" },
-            info: "When it's on, motorways, their ramps and roads tagged motorroad=yes are never used.",
-          },
-        ],
-      },
-      {
         title: "Surfaces", collapsed: true,
         info: "Comes before the road type: a gravel tertiary road uses the gravel values. Off = the road type's value is used.\n\n- Speed: used where OSM has no speed limit.\n- Preference: how much the route planner likes these roads. 1 = neutral, below 1 = avoided, above 1 = preferred. Doesn't change the arrival time.\n\n" + SPOTTY,
         fields: [
@@ -312,11 +301,32 @@ export const SECTIONS = [
 export const flatFields = (fields) => fields.flatMap((f) => (f.card ? flatFields(f.fields) : f.box ? [f, f.box] : [f]));
 export const ALL_FIELDS = SECTIONS.flatMap((s) => s.groups.flatMap((g) => flatFields(g.fields)));
 
-export function autoName(values) {
-  return `Moto ${values.maxSpeed}` + (values.blockMotorroads ? " no motorways" : "");
+// Profile name from the biggest changes, e.g. "Max 110 +Secondary −Motorway −Gravel".
+// + = preferred more than OsmAnd does, − = less (or not allowed). Kept within 40 characters.
+const ROW_CARDS = SECTIONS.flatMap((s) => s.groups.flatMap((g) => g.fields.filter((f) => f.card && f.id !== "card_all")));
+export function autoName(values, defaults) {
+  const parts = [];
+  if (values.maxSpeed !== defaults.maxSpeed) parts.push({ w: 99, t: `Max ${values.maxSpeed}` });
+  for (const c of ROW_CARDS) {
+    const allow = c.fields.find((f) => f.id.startsWith("allow_"));
+    if (allow && values[allow.id] !== defaults[allow.id]) { parts.push({ w: 9, t: (values[allow.id] ? "+" : "−") + c.label }); continue; }
+    const pref = c.fields.find((f) => f.id.startsWith("prio_") && !f.label.startsWith("Ramp"));
+    if (!pref) continue;
+    const base = pref.offAtZero ? 1 : defaults[pref.id], v = values[pref.id];
+    if (pref.offAtZero && Number(v) === 0) continue;
+    const ratio = v / base;
+    if (Math.abs(ratio - 1) >= 0.1) parts.push({ w: Math.abs(Math.log(ratio)), t: (ratio > 1 ? "+" : "−") + c.label });
+  }
+  // Pick the biggest changes that fit, then list them as: max speed, preferred, avoided, switch.
+  parts.sort((a, b) => b.w - a.w);
+  const picked = [];
+  for (const p of parts) if ([...picked, p].map((x) => x.t).join(" ").length <= 40) picked.push(p);
+  const rank = (t) => (t.startsWith("Max") ? 0 : t.startsWith("+") ? 1 : t.startsWith("−") ? 2 : 3);
+  picked.sort((a, b) => rank(a.t) - rank(b.t) || b.w - a.w);
+  return picked.map((x) => x.t).join(" ") || "Car (OsmAnd default)";
 }
 
 export function fileNameFor(name) {
-  const base = name.normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "_");
+  const base = name.normalize("NFKD").replace(/−/g, "-").replace(/[^\w\s+-]/g, "").trim().replace(/\s+/g, "_");
   return (base || "routing_profile") + ".xml";
 }

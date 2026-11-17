@@ -188,23 +188,7 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
     changes.push(`motorcycle rules always active (${n} blocks: motorcycle=*, oneway:motorcycle, …)`);
   }
 
-  // --- 3. extra in-app switches ---
-  if (s.values.blockMotorroads) {
-    const params = children(profile).filter((e) => e.nodeName === "parameter");
-    insertAfter(params[params.length - 1], el(doc, "parameter", {
-      id: "avoid_motorroads", name: "Block motorways and motorroads",
-      description: "Never use motorways or roads with motorway rules (motorroad=yes)", type: "boolean",
-    }), "\t\t");
-    // Rules are first-match: put the block right after the leading osmand_change rule,
-    // before the generic "highway=motorway is allowed" selects.
-    const access = section(profile, ["way", "access"]);
-    insertAfter(children(access)[0], ifBlock(doc, "avoid_motorroads", [
-      ["-1", "highway", "motorway"], ["-1", "highway", "motorway_link"], ["-1", "motorroad", "yes"],
-    ]), "\t\t\t", " Routing Profile Creator: hard block on motorways and motorroads ");
-    changes.push('new switch "Block motorways and motorroads" (avoid_motorroads)');
-  }
-
-  // --- 4. header comment ---
+  // --- 3. header comment ---
   const safeName = s.name.replace(/-{2,}/g, "-"); // "--" is not allowed inside XML comments
   const header = doc.createComment(
     `\n  ${safeName}\n  Created with Routing Profile Creator (https://therealnepomuk.github.io/routing-profile-creator/)\n` +
@@ -226,27 +210,6 @@ function el(doc, tag, attrs) {
   const e = doc.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
   return e;
-}
-
-function ifBlock(doc, param, selects) {
-  const ifEl = el(doc, "if", { param });
-  for (const [value, t, v] of selects) {
-    ifEl.appendChild(doc.createTextNode("\n\t\t\t\t"));
-    ifEl.appendChild(el(doc, "select", { value, t, v }));
-  }
-  ifEl.appendChild(doc.createTextNode("\n\t\t\t"));
-  return ifEl;
-}
-
-// Insert `node` (optionally preceded by a comment) after `ref`, on its own line.
-function insertAfter(ref, node, indent, comment) {
-  const parent = ref.parentNode;
-  const anchor = ref.nextSibling;
-  const doc = ref.ownerDocument;
-  const add = (n) => parent.insertBefore(n, anchor);
-  if (comment) { add(doc.createTextNode("\n" + indent)); add(doc.createComment(comment)); }
-  add(doc.createTextNode("\n" + indent));
-  add(node);
 }
 
 // Replace every <if param="…"> with its children (makes those rules unconditional).

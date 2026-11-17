@@ -172,7 +172,7 @@ function updateSummaries() {
     sum.classList.toggle("changed", flatFields(c.fields).some(isChanged));
   }
   updateRelations();
-  if (!nameEdited) el.name.value = autoName(values);
+  if (!nameEdited) el.name.value = autoName(values, defaults);
 }
 
 function refreshAll() {
@@ -282,7 +282,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !el.shee
 // ---------- download ----------
 function download() {
   if (!template) return;
-  const name = el.name.value.trim() || autoName(values);
+  const name = el.name.value.trim() || autoName(values, defaults);
   let xml;
   try {
     xml = buildOsmandXml({ name, vehicle: VEHICLE, values }, template);

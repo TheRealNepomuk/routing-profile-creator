@@ -1,6 +1,6 @@
 # Plan — Routing Profile Creator
 
-**Status:** draft, updated 2026-11-14
+**Status:** first beta, updated 2026-11-17
 
 **Name:** Routing Profile Creator — *Custom routing profiles for OsmAnd*
 **Repo:** https://github.com/TheRealNepomuk/routing-profile-creator (public) · **Hosting:** GitHub Pages ·
@@ -48,10 +48,51 @@
   ignores limits there already), ferries and car trains. Surface speeds (collapsed, off by default):
   rule right after the `$maxspeed` rules, or before them with the box. "Roads without a speed limit"
   section removed again.
-- **Next (user, with fresh mind):** review on the phone, decide grouping and what to cut.
-  Candidates: barrier slider range 0–600 s (fiddly), paths/footways/steps in Allowed roads,
-  Short way mode, Changing road type. Later: new rules beyond the car profile (gradient,
-  smoothness), each checked against OsmAnd's map data first. Add a GPLv3 `LICENSE` before promoting.
+- **2026-11-17: first beta state** (commits `1857b37` … latest). Title "OsmAnd Routing Editor" with a
+  "How does this work?" sheet (five short blocks + examples, links OsmAnd's navigation-settings docs).
+  Starts from the plain car profile values (no own start values). Two sections: **Road type
+  preferences** (row "All roads" = max cruising + minimum speed; one folded row per road type and
+  surface with speed, preference, allowed, ramp values; road condition; paths; access; switching road
+  type; ferries and car trains at the bottom) and **Turns, stops and obstacles**. New rules: surface
+  preferences (compacted, fine gravel, dirt, ground) and "Block completely" on fords/barriers (-1 rules
+  at the top of the obstacle list). Removed: fuel-efficient mode, the motorway in-app switch, the
+  layout editor. Linked limits: speed sliders show the range OsmAnd clamps (above max / below min) and
+  grey out clamped values; settings without effect are dimmed. Profile name is built from the biggest
+  changes ("Max 110 +Secondary −Motorway"). Info texts: general text in the group ⓘ (bullets), option
+  ⓘ only says what the thing is.
+- **Checked in OsmAnd code (2026-11-17):** `BinaryRoutePlanner` caps speed × priority at maxSpeed, so
+  preference > 1 only helps up to max cruising speed; minSpeed/maxSpeed clamp happens before priority.
+- Still open from before: add a GPLv3 `LICENSE` before promoting.
+
+## Open topic for next session: how far should this go?
+
+**User's goal (2026-11-17):** a full GUI to build a complete routing file from scratch. Default =
+OsmAnd's car profile exactly as is; motorcycle, truck and all switches as additional options; every
+rule editable. The user likes the current beta and wants to decide the direction with a fresh mind.
+
+**Current deviations from the pure car profile** (exporter, unasked by design back then):
+`derivedProfiles` is set to `default`, and the motorcycle `<if>` blocks are unwrapped (motorcycle
+rules always on). With the new goal both should become options, off by default.
+
+**Proposed order (not decided):**
+1. Pure car profile as default + a section "Vehicles and switches in OsmAnd": which variants the file
+   offers (car / truck / motorcycle) and every `<parameter>` as left out / in app off / in app on by
+   default / built in permanently.
+2. "All rules" layer generated from the template (every block, every select, `<if>` groups shown as
+   "only with switch X" / "only for motorcycle"), editing the same values as the friendly sections.
+3. Adding and deleting rules ("from scratch").
+
+**Feasibility findings (OsmAnd source, 2026-11-17):**
+- Variants: Android `RoutingDataUtils.getOfflineRoutingProfiles` and iOS
+  `OARoutingDataUtils.mm` both read `derivedProfiles` from imported files. Navigation type then lists a
+  group named after the **file name** with the profile + "Truck" + "Motorcycle" (generic names).
+  Choosing a variant sets `profile_<name>=true` (`RoutingConfiguration.Builder.build`).
+- Switches: `<parameter type="boolean" default="true">` is supported (`parseRoutingParameter`), so a
+  switch can be pre-ticked. `profiles="truck"` limits a switch to that variant. "Built in" = unwrap
+  the `<if param>` blocks (existing `unwrapIfs`).
+- **To test on the phone:** import a file with variants, pick "Motorcycle" under it, check that the
+  motorcycle rules apply.
+- Also untested: does re-importing a file with the same name replace the profile or add a second one?
 
 ## iOS import findings (tested 2026-11-14, iPhone 17)
 
