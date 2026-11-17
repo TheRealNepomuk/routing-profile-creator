@@ -1,12 +1,14 @@
 // Routing Profile Creator — page logic
-import { SECTIONS, ALL_FIELDS, autoName, fileNameFor } from "./settings.js";
+import { SECTIONS, ALL_FIELDS, flatFields, autoName, fileNameFor } from "./settings.js";
+import { applyLayout } from "./layout.js";
 import { buildOsmandXml, readDefaults, TEMPLATE_URL } from "./exporters/osmand.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
   sections: $("sections"), name: $("profileName"),
   download: $("downloadBtn"), status: $("status"),
-  sheet: $("sheet"), scrim: $("scrim"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
+  sheet: $("sheet"), scrim: $("scrim"), sheetTitle: $("sheetTitle"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
+  help: $("helpBtn"),
 };
 
 const VEHICLE = "motorcycle";
@@ -14,6 +16,9 @@ let template = null;
 let defaults = {};
 const values = {};
 let nameEdited = false;
+let sections = SECTIONS; // the layout editor (dev/editor.html) can replace this live
+const shown = () => sections.flatMap((s) => s.groups.flatMap((g) => flatFields(g.fields)));
+const cards = () => sections.flatMap((s) => s.groups.flatMap((g) => g.fields.filter((f) => f.card)));
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function fmtVal(f, v) {
@@ -40,7 +45,12 @@ function renderField(f) {
   if (f.control === "slider") {
     end = `<output class="f-val" for="${fid}" id="v-${f.id}"></output>`;
     below = `<input class="range" id="${fid}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" aria-label="${esc(f.label)}">`;
-    if (f.limitBox) below += `<label class="f-limit"><input class="check" id="f-${f.limitBox.id}" type="checkbox"> ${esc(f.limitBox.label)}</label>`;
+    if (f.box) {
+      const bid = "i-" + f.box.id;
+      below += `<div class="f-box"><label class="f-limit"><input class="check" id="f-${f.box.id}" type="checkbox"> ${esc(f.box.label)}</label>`
+        + (f.box.info ? infoButton(bid, f.box.label) : "") + `</div>`
+        + (f.box.info ? infoBlock(bid, paras(f.box.info), "f-info") : "");
+    }
   } else if (f.control === "toggle") {
     end = `<input class="switch" id="${fid}" type="checkbox">`;
   }
@@ -52,19 +62,41 @@ function renderField(f) {
   </div>`;
 }
 
+// A card bundles every setting for one road type or surface, folded, with a summary of its values.
+function renderCard(c) {
+  return `<details class="card" data-card="${c.id}">
+    <summary><span class="card-title">${esc(c.label)}</span><span class="card-sum" id="cs-${c.id}"></span><span class="chev"></span></summary>
+    <div class="card-body">${c.info ? `<p class="card-desc">${esc(c.info)}</p>` : ""}${c.fields.map(renderField).join("")}</div>
+  </details>`;
+}
+
+// Short summary of a card's values, e.g. "80 km/h · 1.2× · not allowed".
+function cardSummary(c) {
+  const parts = [];
+  for (const f of flatFields(c.fields)) {
+    const v = values[f.id];
+    if (v === undefined || /^Ramp /.test(f.label)) continue;
+    if (f.target.kind === "override") { if (v) parts.push("no limits"); }
+    else if (f.target.kind === "block") { if (v) parts.push("blocked"); }
+    else if (f.control === "toggle") { if (!v) parts.push("not allowed"); }
+    else if (!(f.offAtZero && Number(v) === 0) && f.unit !== "s") parts.push(fmtVal(f, v));
+  }
+  return parts.join(" · ") || "Off";
+}
+
 function renderGroup(g) {
   const gid = "g-" + (++uid);
   const head = g.title || g.info
     ? `<div class="group-head">${g.title ? `<h3>${esc(g.title)}</h3>` : ""}${g.info ? infoButton(gid, g.title || "this section") : ""}${g.collapsed ? '<span class="chev"></span>' : ""}</div>`
     : "";
   const info = g.info ? infoBlock(gid, paras(g.info), "group-info") : "";
-  const fields = g.fields.map(renderField).join("");
+  const fields = g.fields.map((f) => (f.card ? renderCard(f) : renderField(f))).join("");
   if (g.collapsed) return `<details class="group"><summary>${head}</summary>${info}${fields}</details>`;
   return `<div class="group">${head}${info}${fields}</div>`;
 }
 
 function render() {
-  el.sections.innerHTML = SECTIONS.map((s, i) => `
+  el.sections.innerHTML = sections.map((s, i) => `
     <details class="panel glass sec" data-section="${s.id}"${i === 0 ? " open" : ""}>
       <summary><span class="sec-title">${esc(s.title)}</span><span class="sec-sum" id="sum-${s.id}"></span><span class="chev"></span></summary>
       <div class="sec-body">${s.intro ? `<p class="sec-intro">${esc(s.intro)}</p>` : ""}${s.groups.map(renderGroup).join("")}</div>
@@ -88,23 +120,28 @@ function showField(f) {
 }
 
 function updateSummaries() {
-  for (const s of SECTIONS) {
-    const fields = s.groups.flatMap((g) => g.fields.flatMap((f) => (f.limitBox ? [f, f.limitBox] : [f])));
+  for (const s of sections) {
+    const fields = s.groups.flatMap((g) => flatFields(g.fields));
     const n = fields.filter(isChanged).length;
     const sum = $("sum-" + s.id);
-    sum.textContent = s.id === "speed" ? `max ${values.maxSpeed} km/h` : (n ? `${n} changed` : "OsmAnd default");
+    sum.textContent = s.id === "vehicle" ? `${values.maxSpeed} km/h` : (n ? `${n} changed` : "OsmAnd default");
     sum.classList.toggle("changed", n > 0);
+  }
+  for (const c of cards()) {
+    const sum = $("cs-" + c.id);
+    sum.textContent = cardSummary(c);
+    sum.classList.toggle("changed", flatFields(c.fields).some(isChanged));
   }
   if (!nameEdited) el.name.value = autoName(values);
 }
 
 function refreshAll() {
-  ALL_FIELDS.forEach(showField);
+  shown().forEach(showField);
   updateSummaries();
 }
 
-function bind() {
-  for (const f of ALL_FIELDS) {
+function bindInputs() {
+  for (const f of shown()) {
     const input = $("f-" + f.id);
     const onChange = () => {
       if (f.control === "toggle") values[f.id] = input.checked;
@@ -118,6 +155,10 @@ function bind() {
     };
     input.addEventListener(f.control === "toggle" ? "change" : "input", onChange);
   }
+}
+
+function bind() {
+  bindInputs();
   el.sections.addEventListener("click", (e) => {
     const info = e.target.closest(".info-btn");
     if (info) {
@@ -181,8 +222,9 @@ const INSTRUCTIONS = {
 
 // ---------- sheet ----------
 let lastFocus = null;
-function openSheet(name, file) {
-  el.sheetBody.innerHTML = INSTRUCTIONS[platform()](name, file);
+function openSheet(title, html) {
+  el.sheetTitle.textContent = title;
+  el.sheetBody.innerHTML = html;
   lastFocus = document.activeElement;
   el.scrim.hidden = false;
   el.sheet.hidden = false;
@@ -217,9 +259,28 @@ function download() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-  openSheet(name, fileName);
+  openSheet("Finish in OsmAnd", INSTRUCTIONS[platform()](name, fileName));
 }
 el.download.addEventListener("click", download);
+
+// ---------- help ----------
+const HELP = `
+  <p class="lead">A detailed explanation and guide is coming here soon.</p>`;
+el.help.addEventListener("click", () => openSheet("How does this work?", HELP));
+
+// ---------- layout preview (only inside dev/editor.html) ----------
+if (new URLSearchParams(location.search).has("preview")) {
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin || e.data?.type !== "layout") return;
+    const open = new Set([...el.sections.querySelectorAll("details.sec[open]")].map((d) => d.dataset.section));
+    sections = applyLayout(e.data.layout, SECTIONS, ALL_FIELDS);
+    render();
+    bindInputs();
+    el.sections.querySelectorAll("details.sec").forEach((d) => { d.open = open.has(d.dataset.section); });
+    if (template) refreshAll();
+  });
+  window.parent.postMessage({ type: "preview-ready" }, location.origin);
+}
 
 // ---------- start ----------
 // The template is loaded up front: it provides the OsmAnd defaults, and the download

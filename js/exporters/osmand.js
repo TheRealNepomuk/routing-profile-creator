@@ -54,7 +54,8 @@ function readValue(profile, field) {
     const raw = selectsFor(profile, t)[0].getAttribute("value");
     return field.control === "toggle" ? raw === field.on : parseFloat(raw);
   }
-  if (t.kind === "surfaceSpeed") return 0; // new rule, none in upstream
+  if (t.kind === "surfaceSpeed" || t.kind === "surfacePrio") return 0; // new rule, none in upstream
+  if (t.kind === "block") return false; // "Block completely" box, off in upstream
   if (t.kind === "override") return false; // "Ignore speed limits" box, off in upstream
   return field.control === "toggle" ? false : null; // custom additions: off in upstream
 }
@@ -117,7 +118,7 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
       if (!s.values[f.id] || !(Number(s.values[p.id]) > 0)) continue;
       const pairs = p.target.kind === "surfaceSpeed" ? [[p.target.t, p.target.v]] : p.target.pairs;
       before.push({ surface: p.target.kind === "surfaceSpeed", value: kmh(p), pairs });
-    } else if (f.target.kind === "surfaceSpeed" && Number(s.values[f.id]) > 0 && !s.values[f.limitBox.id]) {
+    } else if (f.target.kind === "surfaceSpeed" && Number(s.values[f.id]) > 0 && !s.values[f.box.id]) {
       after.push({ value: kmh(f), pairs: [[f.target.t, f.target.v]] });
     }
   }
@@ -140,6 +141,39 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
     if (after.length) {
       speed.insertBefore(doc.createTextNode("\n\t\t\t"), afterLimits);
       insert(after, afterLimits, " Routing Profile Creator: surface speeds (where no speed limit is mapped) ", " where no speed limit");
+    }
+  }
+
+  // --- 1c. surface preferences upstream has no rule for: next to its gravel/unpaved rules ---
+  const surfPrio = ALL_FIELDS.filter((f) => f.target.kind === "surfacePrio" && Number(s.values[f.id]) > 0);
+  if (surfPrio.length) {
+    const prio = section(profile, ["way", "priority"]);
+    const anchor = children(prio).find((e) => e.nodeName === "select" && e.getAttribute("t") === "surface");
+    if (!anchor) throw new Error("Template has no surface priority rule");
+    prio.insertBefore(doc.createComment(" Routing Profile Creator: surface preferences "), anchor);
+    prio.insertBefore(doc.createTextNode("\n\t\t\t"), anchor);
+    for (const f of surfPrio) {
+      const v = fmt(f, Number(s.values[f.id]));
+      prio.insertBefore(el(doc, "select", { value: v, t: f.target.t, v: f.target.v }), anchor);
+      prio.insertBefore(doc.createTextNode("\n\t\t\t"), anchor);
+      changes.push(`priority ${f.target.t}=${f.target.v}: ${v}`);
+    }
+  }
+
+  // --- 1d. "Block completely": -1 rules at the very top of the obstacle list (first match wins,
+  // so they beat access-tag exceptions and switch blocks such as avoid_toll) ---
+  const blocks = ALL_FIELDS.filter((f) => f.target.kind === "block" && s.values[f.id]);
+  if (blocks.length) {
+    const obst = section(profile, ["point", "obstacle"]);
+    const first = obst.firstChild;
+    obst.insertBefore(doc.createTextNode("\n\t\t\t"), first);
+    obst.insertBefore(doc.createComment(" Routing Profile Creator: blocked completely "), first);
+    for (const f of blocks) for (const [t, v] of f.target.pairs) {
+      const attrs = { value: "-1", t };
+      if (v !== null) attrs.v = v;
+      obst.insertBefore(doc.createTextNode("\n\t\t\t"), first);
+      obst.insertBefore(el(doc, "select", attrs), first);
+      changes.push(`obstacle ${t}=${v ?? "*"}: blocked`);
     }
   }
 

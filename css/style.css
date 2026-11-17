@@ -100,6 +100,19 @@ body {
   text-wrap: balance;
 }
 .intro p { margin: 0; color: var(--ink-2); max-width: 34ch; }
+.btn-secondary {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-edge);
+  background: var(--glass);
+  color: var(--ink);
+  font: 500 15px var(--font);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--glass-shine);
+  transition: transform .12s;
+}
+.btn-secondary:active { transform: scale(0.97); }
 
 /* ---------- panels ---------- */
 .panel {
@@ -149,6 +162,17 @@ details.group > summary { list-style: none; cursor: pointer; }
 details.group > summary::-webkit-details-marker { display: none; }
 details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 
+/* ---------- road / surface cards ---------- */
+.card { margin: 6px 0; border-radius: var(--r-field); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); }
+.card > summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; cursor: pointer; }
+.card > summary::-webkit-details-marker { display: none; }
+.card-title { font-size: 15px; font-weight: 500; }
+.card-sum { margin-left: auto; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.card-sum.changed { color: var(--amber); }
+.card > summary .chev { width: 7px; height: 7px; }
+.card-body { padding: 0 14px 8px; }
+.card-desc { margin: 0 0 4px; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+
 /* ---------- field rows ---------- */
 .f { padding: 2px 0; }
 .f + .f { border-top: 1px solid rgba(255,255,255,0.05); }
@@ -159,7 +183,8 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .unit { font-size: 13px; color: var(--ink-3); min-width: 30px; }
 .f.changed .f-val, .f.changed .num { color: var(--amber); }
 .f.changed .num { border-color: rgba(255, 170, 60, 0.45); }
-.f-limit { display: flex; align-items: center; gap: 8px; min-height: 36px; margin: 0 0 4px; font-size: 14px; color: var(--ink-2); cursor: pointer; width: fit-content; }
+.f-box { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; }
+.f-limit { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; color: var(--ink-2); cursor: pointer; width: fit-content; }
 .f-limit .check { width: 18px; height: 18px; margin: 0; accent-color: var(--amber); }
 .f-limit.changed { color: var(--amber); }
 
