@@ -76,7 +76,7 @@ const SURFACE = {
 // "Block completely"). A `card` bundles several fields for one road type or surface.
 
 const IGNORE_INFO = "Tick \"Ignore speed limits\" to use your speed even where OSM has a speed limit, e.g. for gravel roads with a 100 limit that you'd ride at 40.\n\n"
-  + "Careful: it then applies to every road of that type, including stretches through towns with a 30 or 50 limit, so routes through towns look faster than they are. Your cruising speed still caps it.";
+  + "Careful: it then applies to every road of that type, including stretches through towns with a 30 or 50 limit, so routes through towns look faster than they are. Your max cruising speed still caps it.";
 const BLOCK_INFO = "Tick it and the route never passes one, even where it's tagged as open for you.";
 const limitBox = (id) => ({ id: "over_" + id, of: "speed_" + id, label: "Ignore speed limits", control: "toggle", target: { kind: "override" }, info: IGNORE_INFO });
 const blockBox = (id, pairs) => ({ id: "block_" + id, of: "obst_" + id, label: "Block completely", control: "toggle", target: { kind: "block", pairs }, info: BLOCK_INFO });
@@ -119,8 +119,8 @@ export const SECTIONS = [
     groups: [
       {
         fields: [
-          slider("maxSpeed", "Typical cruising speed", KMH, 30, 150, 5, { kind: "attr", attr: "maxSpeed" },
-            "Even if a road allows a higher speed, the route is calculated with this speed at most. Arrival times use it too.", { start: 90 }),
+          slider("maxSpeed", "Max cruising speed", KMH, 30, 150, 5, { kind: "attr", attr: "maxSpeed" },
+            "Even if a road allows a higher speed, the route is calculated with this speed at most. Arrival times use it too."),
           slider("minSpeed", "Minimum speed", KMH, 1, 60, 1, { kind: "attr", attr: "minSpeed" },
             "Every road is calculated with at least this speed. A road that would be slower, e.g. a living street at walking pace, counts as this fast.\n\nIt doesn't avoid slow roads, it makes them look faster than they are. A lower value makes slow roads count as slow. To avoid roads, use the preferences under Road type preferences."),
         ],
@@ -132,7 +132,7 @@ export const SECTIONS = [
     groups: [
       {
         title: "Road types",
-        info: "Speed: where OSM has a speed limit for a road, OsmAnd calculates with the limit. Where it has none, it uses your speed for the road type. In many areas that's most minor roads. Your cruising speed caps all of them. \"Ignore speed limits\" changes that per road type, see its ⓘ.\n\n" + PRIO_INFO,
+        info: "Speed: where OSM has a speed limit for a road, OsmAnd calculates with the limit. Where it has none, it uses your speed for the road type. In many areas that's most minor roads. Your max cruising speed caps all of them. \"Ignore speed limits\" changes that per road type, see its ⓘ.\n\n" + PRIO_INFO,
         fields: [
           card("motorway", "Motorway", withRamp("motorway"), [
             speed("motorway", H("motorway")), prio("motorway", H("motorway")),
@@ -165,7 +165,7 @@ export const SECTIONS = [
           card("living_street", "Living street", ROAD.living_street,
             [speed("living_street", H("living_street")), prio("living_street", H("living_street")), allowed("living_street", "highway", "living_street")]),
           card("other", "Everything else", ROAD.other + " Roads of unknown type (highway=road) count as Unclassified instead.", [
-            slider("defaultSpeed", "Speed", KMH, 5, 150, 5, { kind: "attr", attr: "defaultSpeed" }, "", { start: 50 }),
+            slider("defaultSpeed", "Speed", KMH, 5, 150, 5, { kind: "attr", attr: "defaultSpeed" }, ""),
             prio("other", [[null, null]]),
           ]),
         ],
@@ -175,7 +175,7 @@ export const SECTIONS = [
         info: "Adds a switch to OsmAnd under Route parameters → Avoid roads, next to OsmAnd's own (toll, unpaved, ferries, …). Turn it on per trip.",
         fields: [
           {
-            id: "blockMotorroads", label: "Block motorways and motorroads", control: "toggle", start: true,
+            id: "blockMotorroads", label: "Block motorways and motorroads", control: "toggle",
             target: { kind: "custom" },
             info: "When the switch is on, motorways, their ramps and roads tagged motorroad=yes (motorway rules without being a motorway) are never used.",
           },
@@ -271,11 +271,11 @@ export const SECTIONS = [
         title: "Turns",
         fields: [
           slider("slightTurn", "Turn (60–120°)", SEC, 0, 60, 1, { kind: "attr", attr: "slightTurn" },
-            "Seconds added for a normal turn. Gentle bends of 30–60° get half of this.", { start: 8 }),
+            "Seconds added for a normal turn. Gentle bends of 30–60° get half of this."),
           slider("sharpTurn", "Sharp turn (over 120°)", SEC, 0, 120, 1, { kind: "attr", attr: "sharpTurn" },
-            "Seconds added for very sharp turns and U-turns.", { start: 15 }),
+            "Seconds added for very sharp turns and U-turns."),
           slider("roundaboutTurn", "Roundabout", SEC, 0, 60, 1, { kind: "attr", attr: "roundaboutTurn" },
-            "Seconds added for a roundabout: half when entering, half when leaving.", { start: 5 }),
+            "Seconds added for a roundabout: half when entering, half when leaving."),
           slider("penaltyForReverseDirection", "Turning around at the start", SEC, 0, 900, 10, { kind: "attrChild", name: "penaltyForReverseDirection" },
             "Seconds added if the route starts in the opposite direction to the one you're facing, i.e. the time to find a place to turn."),
         ],
