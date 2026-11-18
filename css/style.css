@@ -265,6 +265,7 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .save-status { margin-top: 12px; font-size: 15px; color: var(--ink); }
 .save-status .text { margin-top: 8px; font-size: 15px; }
 .sheet .sheet-action { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.sheet #mailStatus { margin: 4px 2px 16px; }
 .sheet .sheet-close {
   width: 100%; margin-top: 0;
   border-color: var(--glass-edge); background: rgba(255, 255, 255, 0.05); color: var(--ink-2);

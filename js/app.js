@@ -410,12 +410,36 @@ window.addEventListener("hashchange", () => {
 });
 
 // ---------- contact ----------
-// The address is only put together on click, so it never sits in the page source for spam bots.
+// "Contact" links open a small sheet: write an email, or copy the address (for people without a
+// mail app). The address is only put together on click, so it never sits in the page source.
 const MAIL = ["oat-upon-dagger", "duck.com"];
+const mailAddress = () => MAIL.join("@");
+const CONTACT = `
+  <p class="lead">Missing an option, found a bug, or want trucks or another vehicle? I'm happy to hear from you.</p>
+  <button class="btn-primary sheet-action" id="mailWrite" type="button">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    Write an email
+  </button>
+  <button class="btn-secondary sheet-action" id="mailCopy" type="button">Copy email address</button>
+  <div class="save-status" id="mailStatus" role="status"></div>`;
+
 document.addEventListener("click", (e) => {
   if (!e.target.closest("[data-mail]")) return;
   e.preventDefault();
-  location.href = `mailto:${MAIL.join("@")}?subject=${encodeURIComponent("Routing Profile Creator")}`;
+  openSheet("Contact", CONTACT, "Close");
+});
+el.sheetBody.addEventListener("click", async (e) => {
+  if (e.target.closest("#mailWrite")) {
+    location.href = `mailto:${mailAddress()}?subject=${encodeURIComponent("Routing Profile Creator")}`;
+  } else if (e.target.closest("#mailCopy")) {
+    const status = $("mailStatus");
+    try {
+      await navigator.clipboard.writeText(mailAddress());
+      status.textContent = `Copied: ${mailAddress()}`;
+    } catch {
+      status.textContent = `Copy this address: ${mailAddress()}`;
+    }
+  }
 });
 
 // ---------- help ----------
@@ -458,7 +482,7 @@ const HELP = `
 
     <section class="help-card">
       <h3>Questions or ideas?</h3>
-      <p>Missing an option, found a bug, or want trucks or another vehicle? <a href="#" data-mail>Send me an email</a>.</p>
+      <p>Missing an option, found a bug, or want trucks or another vehicle? <a href="#" data-mail>Contact me</a>.</p>
     </section>
   </div>`;
 el.help.addEventListener("click", () => openSheet("How does this work?", HELP));
