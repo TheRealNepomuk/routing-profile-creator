@@ -409,6 +409,15 @@ window.addEventListener("hashchange", () => {
   if (code && template && code !== currentCode()) applyCode(code, "the link");
 });
 
+// ---------- contact ----------
+// The address is only put together on click, so it never sits in the page source for spam bots.
+const MAIL = ["oat-upon-dagger", "duck.com"];
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("[data-mail]")) return;
+  e.preventDefault();
+  location.href = `mailto:${MAIL.join("@")}?subject=${encodeURIComponent("Routing Profile Creator")}`;
+});
+
 // ---------- help ----------
 const HELP = `
   <div class="help">
@@ -445,6 +454,11 @@ const HELP = `
         <dt>Fewer traffic lights</dt><dd>Turns, stops and obstacles → Traffic light: 40 s.</dd>
         <dt>Never through a ford</dt><dd>Ford: tick Block completely.</dd>
       </dl>
+    </section>
+
+    <section class="help-card">
+      <h3>Questions or ideas?</h3>
+      <p>Missing an option, found a bug, or want trucks or another vehicle? <a href="#" data-mail>Send me an email</a>.</p>
     </section>
   </div>`;
 el.help.addEventListener("click", () => openSheet("How does this work?", HELP));
