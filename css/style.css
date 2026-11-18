@@ -241,7 +241,7 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 /* Three levels: orange = Save & share (main action), solid blue = help, glass = tools. */
 .help-btn {
   flex: none; display: grid; place-items: center;
-  width: 46px; height: 46px; margin-top: 2px;
+  width: 58px; height: 58px;
   border: 0; border-radius: 50%;
   background: linear-gradient(180deg, #3d9cff, #0a84ff);
   color: #fff; cursor: pointer;
