@@ -403,7 +403,7 @@ const HELP = `
       <h3>Examples</h3>
       <dl class="recipes">
         <dt>More country roads</dt><dd>Road types → Secondary and Tertiary: preference 1.2. Motorway: 0.5.</dd>
-        <dt>No motorways at all</dt><dd>Turn on the Motorway switch. You get a switch in OsmAnd to use per trip.</dd>
+        <dt>Stay off motorways</dt><dd>Road types → Motorway: preference and ramp preference 0.1. To skip them only on some trips, use OsmAnd's own "Avoid motorways" switch instead.</dd>
         <dt>Stay off gravel</dt><dd>Surfaces → Gravel and Unpaved: preference 0.2. Track: turn off Allowed.</dd>
         <dt>Fewer traffic lights</dt><dd>Turns, stops and obstacles → Traffic light: 40 s.</dd>
         <dt>Never through a ford</dt><dd>Ford: tick Block completely.</dd>

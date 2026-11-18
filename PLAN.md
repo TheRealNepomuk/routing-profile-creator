@@ -1,6 +1,6 @@
 # Plan — Routing Profile Creator
 
-**Status:** first beta, updated 2026-11-17
+**Status:** beta, close to v1, updated 2026-11-18
 
 **Name:** Routing Profile Creator — *Custom routing profiles for OsmAnd*
 **Repo:** https://github.com/TheRealNepomuk/routing-profile-creator (public) · **Hosting:** GitHub Pages ·
@@ -62,22 +62,49 @@
   ⓘ only says what the thing is.
 - **Checked in OsmAnd code (2026-11-17):** `BinaryRoutePlanner` caps speed × priority at maxSpeed, so
   preference > 1 only helps up to max cruising speed; minSpeed/maxSpeed clamp happens before priority.
-- Still open from before: add a GPLv3 `LICENSE` before promoting.
+- **2026-11-18: ship first, expand later.** Decided to release the beta as v1 and choose the next
+  expansion from user feedback, instead of building the full GUI first. Done today:
+  - Page renamed back to **Routing Profile Creator**, subtitle "Custom routing profiles for OsmAnd"
+    (no "OsmAnd" in the site name, see Legal).
+  - **Car profile is the default.** The exporter no longer unwraps the motorcycle blocks by itself;
+    a **"Motorcycle rules"** setting (Access group, off by default) does it. It covers all four
+    `profile_motorcycle` blocks (access, oneway, priority of `motorcycle=designated`, barriers) as one
+    switch, since they only make sense together. Profile name starts with "Moto" when it's on.
+    `derivedProfiles` stays `default` (one predictable Navigation type entry) and is now listed in
+    the file header.
+  - **Trucks: not now.** Would work the same way (unwrap the 5 `profile_truck` blocks, plus remove
+    `profiles="truck"` from 13 parameters so hazmat, axle load etc. show up), but the target group is
+    motorcyclists. Add it if someone asks.
+  - **Settings code** (`js/code.js`): changed values as one readable line, e.g.
+    `rpc1:maxSpeed=90,prio_secondary=1.2,motorcycle=1,n=My%20bike`. Lives in the URL hash (reload
+    keeps settings, "Copy share link"), and in the header comment of every downloaded file ("Open a
+    profile file" restores it). Not in the file/profile name: OsmAnd shows that name, and it has
+    length limits. Files made before 2026-11-18 have no code.
+  - GPLv3 `LICENSE` added.
+- **Correction:** the comment in `routing.xml` says switching road type costs the difference one way
+  only; the code check (2026-11-14, see `js/settings.js`) says |a − b| / 2 seconds in both
+  directions. The code is what counts.
 
-## Open topic for next session: how far should this go?
+## Before promoting (needs the phone)
+
+- [ ] Import a file with Motorcycle rules on, check `motorcycle=*` roads and barriers behave
+- [ ] Re-import a file with the same name: replaces the profile or adds a second one? → instructions
+- [ ] Android: download and import
+- [ ] iPhone: "Copy share link", open the link in Safari, settings come back
+
+## Later: how far should this go?
 
 **User's goal (2026-11-17):** a full GUI to build a complete routing file from scratch. Default =
 OsmAnd's car profile exactly as is; motorcycle, truck and all switches as additional options; every
 rule editable. The user likes the current beta and wants to decide the direction with a fresh mind.
 
-**Current deviations from the pure car profile** (exporter, unasked by design back then):
-`derivedProfiles` is set to `default`, and the motorcycle `<if>` blocks are unwrapped (motorcycle
-rules always on). With the new goal both should become options, off by default.
+**Deviation from the pure car profile left (2026-11-18):** only `derivedProfiles` = `default`.
+Motorcycle rules are a setting now (see above).
 
 **Proposed order (not decided):**
-1. Pure car profile as default + a section "Vehicles and switches in OsmAnd": which variants the file
-   offers (car / truck / motorcycle) and every `<parameter>` as left out / in app off / in app on by
-   default / built in permanently.
+1. A section "Vehicles and switches in OsmAnd": which variants the file offers (car / truck /
+   motorcycle) and every `<parameter>` as left out / in app off / in app on by default / built in
+   permanently. (Car default and the motorcycle part are done.)
 2. "All rules" layer generated from the template (every block, every select, `<if>` groups shown as
    "only with switch X" / "only for motorcycle"), editing the same values as the friendly sections.
 3. Adding and deleting rules ("from scratch").
