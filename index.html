@@ -57,11 +57,12 @@
       </div>
     </section>
 
-    <!-- iPhone Safari only (js/app.js): the home-screen version hands the file straight to the share menu -->
-    <div class="a2hs" id="a2hs" hidden>
+    <!-- iPhone Safari only (js/app.js): the home-screen version hands the file straight to the share menu.
+         Not named "a2hs": ad blockers hide elements with that name. -->
+    <div class="home-tip" id="homeTip" hidden>
       <p><b>Works best from your Home Screen:</b> downloaded files open straight in the share menu.
-      Tap Share <svg class="a2hs-share" viewBox="0 0 24 24" width="16" height="16" aria-label="(the share icon)"><path d="M12 15V4m0 0L8 8m4-4 4 4M6 11v8h12v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> → <b>Add to Home Screen</b>.</p>
-      <button class="a2hs-x" id="a2hsClose" type="button" aria-label="Hide this tip">
+      <span class="nw">Tap Share <svg class="home-tip-share" viewBox="0 0 24 24" width="16" height="16" aria-label="(the share icon)"><path d="M12 15V4m0 0L8 8m4-4 4 4M6 11v8h12v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> <span class="nw">→ <b>Add to Home Screen</b>.</span></p>
+      <button class="home-tip-x" id="homeTipClose" type="button" aria-label="Hide this tip">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>
     </div>
@@ -70,11 +71,12 @@
 
     <div id="sections" class="sections"></div>
 
-    <p class="footnote">Based on <a href="https://github.com/osmandapp/OsmAnd-resources">OsmAnd routing data</a> (GPLv3).
-    <a href="https://github.com/TheRealNepomuk/routing-profile-creator">Source code</a>.
-    <a href="#" data-mail>Contact</a>.<br>
-    Not affiliated with or endorsed by OsmAnd B.V.<br>
-    Anonymous visit counts via <a href="https://www.goatcounter.com">GoatCounter</a>, no cookies.</p>
+    <footer class="footnote">
+      <p class="fn-links"><a href="https://github.com/TheRealNepomuk/routing-profile-creator">Source code</a> · <a href="#" data-mail>Contact</a></p>
+      <p>Based on <a href="https://github.com/osmandapp/OsmAnd-resources">OsmAnd routing data</a> <span class="nw">(GPLv3).</span><br>
+        Not affiliated with or endorsed by <span class="nw">OsmAnd B.V.</span></p>
+      <p>Anonymous visit counts via <a href="https://www.goatcounter.com">GoatCounter</a>, <span class="nw">no cookies.</span></p>
+    </footer>
   </main>
 
   <div class="dock glass">

@@ -117,6 +117,11 @@ body {
 .btn-secondary:hover { background: rgba(10, 132, 255, 0.26); }
 .btn-secondary:active { transform: scale(0.97); }
 
+/* ---------- text wrapping ---------- */
+p, li, dd, .card-desc, .hint { text-wrap: pretty; }
+h1, h2, h3, dt, .card-title, .f-label { text-wrap: balance; }
+.nw { white-space: nowrap; }
+
 /* ---------- panels ---------- */
 .panel {
   border-radius: var(--r-panel);
@@ -146,8 +151,10 @@ body {
   cursor: pointer;
 }
 .sec > summary::-webkit-details-marker { display: none; }
-.sec-title { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
-.sec-sum { margin-left: auto; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+/* Title on top, summary ("OsmAnd default" / "3 changed") below, so the title gets the full width */
+.sec-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 10px 0; }
+.sec-title { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; text-wrap: balance; }
+.sec-sum { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .sec-sum.changed { color: var(--amber); }
 .chev {
   flex: none; width: 9px; height: 9px;
@@ -169,8 +176,8 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .card { margin: 6px 0; border-radius: var(--r-field); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); }
 .card > summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; cursor: pointer; }
 .card > summary::-webkit-details-marker { display: none; }
-.card-title { font-size: 15px; font-weight: 500; }
-.card-sum { margin-left: auto; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.card-title { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.card-sum { margin-left: auto; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; text-wrap: balance; }
 .card-sum.changed { color: var(--amber); }
 .card > summary .chev { width: 7px; height: 7px; }
 .card-body { padding: 0 14px 8px; }
@@ -236,8 +243,8 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 }
 
 /* ---------- home screen tip (iPhone browser only) ---------- */
-.a2hs[hidden] { display: none; }
-.a2hs {
+.home-tip[hidden] { display: none; }
+.home-tip {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 12px 8px 12px 16px;
   border-radius: var(--r-field);
@@ -245,15 +252,15 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
   background: rgba(10, 132, 255, 0.12);
   font-size: 14px; line-height: 1.45; color: var(--ink-2);
 }
-.a2hs p { margin: 0; flex: 1; }
-.a2hs b { color: var(--ink); font-weight: 600; }
-.a2hs-share { vertical-align: -3px; color: #4da3ff; }
-.a2hs-x {
+.home-tip p { margin: 0; flex: 1; }
+.home-tip b { color: var(--ink); font-weight: 600; }
+.home-tip-share { vertical-align: -3px; color: #4da3ff; }
+.home-tip-x {
   flex: none; display: grid; place-items: center;
   width: 32px; height: 32px; margin: -4px 0;
   border: 0; border-radius: 50%; background: transparent; color: var(--ink-2); cursor: pointer;
 }
-.a2hs-x:hover { background: rgba(255, 255, 255, 0.08); }
+.home-tip-x:hover { background: rgba(255, 255, 255, 0.08); }
 
 /* ---------- top buttons, save sheet, coffee ---------- */
 .intro-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -403,10 +410,14 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 .text:focus { border-color: rgba(255, 170, 60, 0.7); outline: none; }
 
 .footnote {
-  margin: 10px 4px 0;
+  margin: 14px 4px 0;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--ink-3);
 }
+.footnote p { margin: 0 0 6px; text-wrap: balance; }
+.footnote .fn-links { font-size: 14px; }
+.footnote .fn-links a { color: var(--ink); }
 .footnote a { color: var(--ink-2); }
 .status:empty { display: none; }
 .status { margin: 0 4px; color: #ffb36b; font-size: 15px; }

@@ -128,7 +128,8 @@ function cardSummary(c) {
       parts.push(isRoadSpeed(f) && isClamped(f) ? `<span class="dim">${t}</span>` : t);
     }
   }
-  return parts.join(" · ") || "Off";
+  // Each part stays in one piece (with its " ·"), so a long summary only breaks between parts.
+  return parts.map((p, i) => `<span class="nw">${p}${i < parts.length - 1 ? " ·" : ""}</span>`).join(" ") || "Off";
 }
 
 function renderGroup(g) {
@@ -145,7 +146,7 @@ function renderGroup(g) {
 function render() {
   el.sections.innerHTML = sections.map((s) => `
     <details class="panel glass sec" data-section="${s.id}">
-      <summary><span class="sec-title">${esc(s.title)}</span><span class="sec-sum" id="sum-${s.id}"></span><span class="chev"></span></summary>
+      <summary><span class="sec-text"><span class="sec-title">${esc(s.title)}</span><span class="sec-sum" id="sum-${s.id}"></span></span><span class="chev"></span></summary>
       <div class="sec-body">${s.intro ? `<p class="sec-intro">${esc(s.intro)}</p>` : ""}${s.groups.map(renderGroup).join("")}</div>
     </details>`).join("");
 }
@@ -492,14 +493,14 @@ window.addEventListener("hashchange", () => {
 // ---------- home screen tip ----------
 // iPhone in the browser only: the home-screen version is the better way to use the page (the file
 // opens straight in the share menu instead of going to Downloads). Hidden for good once dismissed.
-const TIP_KEY = "rpc.a2hsHidden";
+const TIP_KEY = "rpc.homeTipHidden";
 (() => {
   let hidden = false;
   try { hidden = localStorage.getItem(TIP_KEY) === "1"; } catch { /* storage blocked: show it */ }
   if (platform() !== "ios" || hidden) return;
-  const tip = $("a2hs");
+  const tip = $("homeTip");
   tip.hidden = false;
-  $("a2hsClose").addEventListener("click", () => {
+  $("homeTipClose").addEventListener("click", () => {
     tip.hidden = true;
     try { localStorage.setItem(TIP_KEY, "1"); } catch { /* not remembered, fine */ }
   });
