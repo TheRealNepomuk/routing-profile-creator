@@ -435,7 +435,7 @@ el.sheetBody.addEventListener("click", async (e) => {
     const status = $("mailStatus");
     try {
       await navigator.clipboard.writeText(mailAddress());
-      status.textContent = `Copied: ${mailAddress()}`;
+      status.textContent = "Copied to clipboard.";
     } catch {
       status.textContent = `Copy this address: ${mailAddress()}`;
     }
