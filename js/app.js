@@ -9,6 +9,7 @@ const el = {
   download: $("downloadBtn"), status: $("status"),
   sheet: $("sheet"), scrim: $("scrim"), sheetTitle: $("sheetTitle"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
   help: $("helpBtn"), open: $("openBtn"), openFile: $("openFile"), link: $("linkBtn"),
+  save: $("saveBtn"), saveView: $("saveView"), saveStatus: $("saveStatus"),
 };
 
 let template = null;
@@ -135,8 +136,8 @@ function renderGroup(g) {
 }
 
 function render() {
-  el.sections.innerHTML = sections.map((s, i) => `
-    <details class="panel glass sec" data-section="${s.id}"${i === 0 ? " open" : ""}>
+  el.sections.innerHTML = sections.map((s) => `
+    <details class="panel glass sec" data-section="${s.id}">
       <summary><span class="sec-title">${esc(s.title)}</span><span class="sec-sum" id="sum-${s.id}"></span><span class="chev"></span></summary>
       <div class="sec-body">${s.intro ? `<p class="sec-intro">${esc(s.intro)}</p>` : ""}${s.groups.map(renderGroup).join("")}</div>
     </details>`).join("");
@@ -262,15 +263,30 @@ const INSTRUCTIONS = {
 };
 
 // ---------- sheet ----------
+// One sheet, two uses: "Save & share" (name, download, link) and text pages (instructions, help).
 let lastFocus = null;
-function openSheet(title, html) {
+function showSheet(title, saveMode) {
   el.sheetTitle.textContent = title;
-  el.sheetBody.innerHTML = html;
-  lastFocus = document.activeElement;
+  el.saveView.hidden = !saveMode;
+  el.sheetBody.hidden = saveMode;
+  // In the save view the orange button is Download, so closing is the quiet secondary action.
+  el.sheetClose.textContent = saveMode ? "Close" : "Done";
+  el.sheetClose.className = saveMode ? "btn-secondary sheet-close" : "btn-primary";
+  if (el.sheet.hidden) lastFocus = document.activeElement;
   el.scrim.hidden = false;
   el.sheet.hidden = false;
   el.sheetClose.focus();
 }
+function openSheet(title, html) {
+  el.sheetBody.innerHTML = html;
+  showSheet(title, false);
+}
+function openSave() {
+  if (!template) return;
+  el.saveStatus.textContent = "";
+  showSheet("Save & share", true);
+}
+el.save.addEventListener("click", openSave);
 function closeSheet() {
   el.sheet.hidden = true;
   el.scrim.hidden = true;
@@ -289,7 +305,7 @@ function download() {
     // Always write a code, even an empty one, so the file can be opened here again.
     xml = buildOsmandXml({ name, values, code: currentCode() || "rpc1:" }, template);
   } catch (err) {
-    el.status.textContent = "Couldn't create the file: " + err.message;
+    el.saveStatus.textContent = "Couldn't create the file: " + err.message;
     return;
   }
   const fileName = fileNameFor(name);
@@ -301,8 +317,16 @@ function download() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-  openSheet("Finish in OsmAnd", INSTRUCTIONS[platform()](name, fileName));
+  openSheet("Finish in OsmAnd", INSTRUCTIONS[platform()](name, fileName) + COFFEE);
 }
+
+const COFFEE = `
+  <div class="coffee">
+    <span>Useful? Support the project:</span>
+    <a class="coffee-btn" href="https://buymeacoffee.com/therealnepomuk" target="_blank" rel="noopener">
+      <img src="assets/bmc-cup.svg" alt="" width="15" height="22"> Buy me a coffee
+    </a>
+  </div>`;
 el.download.addEventListener("click", download);
 
 // ---------- settings code: URL, open a file, share link ----------
@@ -360,10 +384,10 @@ el.link.addEventListener("click", async () => {
   const url = location.href;
   try {
     await navigator.clipboard.writeText(url);
-    say(currentCode() ? "Link copied. Whoever opens it gets your settings." : "Link copied. You haven't changed anything yet, so it opens the OsmAnd defaults.");
+    el.saveStatus.textContent = currentCode() ? "Link copied. Whoever opens it gets your settings." : "Link copied. You haven't changed anything yet, so it opens the OsmAnd defaults.";
   } catch {
-    openSheet("Share link", `<p class="lead">Copy this link to share your settings:</p>
-      <input class="text" type="text" readonly value="${esc(url)}" onfocus="this.select()">`);
+    el.saveStatus.innerHTML = `Copy this link to share your settings:
+      <input class="text" type="text" readonly value="${esc(url)}" onfocus="this.select()">`;
   }
 });
 
@@ -388,7 +412,7 @@ const HELP = `
     <section class="help-card">
       <h3>Getting it into OsmAnd</h3>
       <ol class="steps">
-        <li>Tap <b>Download XML file</b>.</li>
+        <li>Tap <b>Save &amp; share</b>, then <b>Download XML file</b>.</li>
         <li>Open the file with OsmAnd (on iPhone: <b>Share → OsmAnd</b>).</li>
         <li>Pick it as <b>Navigation type</b> in your profile's <a href="https://osmand.net/docs/user/navigation/guidance/navigation-settings/#navigation-type" target="_blank" rel="noopener">navigation settings</a>.</li>
       </ol>
@@ -417,7 +441,7 @@ el.help.addEventListener("click", () => openSheet("How does this work?", HELP));
 // must happen directly inside the tap (iOS needs that).
 render();
 bind();
-el.download.disabled = true;
+el.save.disabled = true;
 fetch(TEMPLATE_URL)
   .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
   .then((t) => {
@@ -427,6 +451,6 @@ fetch(TEMPLATE_URL)
     el.status.textContent = "";
     const code = hashCode();
     if (!(code && applyCode(code, "the link"))) refreshAll();
-    el.download.disabled = false;
+    el.save.disabled = false;
   })
   .catch((err) => { el.status.textContent = "Couldn't load OsmAnd's base profile (" + err.message + "). Check your connection and reload the page."; });

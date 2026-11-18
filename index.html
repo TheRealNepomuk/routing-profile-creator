@@ -35,36 +35,26 @@
     <section class="intro">
       <h1>Routing Profile Creator</h1>
       <p>Custom routing profiles for OsmAnd</p>
-      <button class="btn-secondary" id="helpBtn" type="button">How does this work?</button>
-    </section>
-
-    <div id="sections" class="sections"></div>
-
-    <section class="panel glass name-panel">
-      <label class="f-row" for="profileName">
-        <span class="f-label">Profile name</span>
-      </label>
-      <input class="text" id="profileName" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="">
-      <p class="hint">Your settings are saved inside every file you download. Open one here to edit it again, or share your settings as a link.</p>
-      <div class="share-row">
+      <div class="intro-btns">
+        <button class="btn-secondary" id="helpBtn" type="button">How does this work?</button>
         <button class="btn-secondary" id="openBtn" type="button">Open a profile file</button>
-        <button class="btn-secondary" id="linkBtn" type="button">Copy share link</button>
         <input id="openFile" type="file" accept=".xml,application/xml,text/xml" hidden>
       </div>
     </section>
 
     <p class="status" id="status" role="status"></p>
 
-    <p class="footnote">The file is OsmAnd's own car profile with your changes, and every change is listed at the top of the file.
-    Based on <a href="https://github.com/osmandapp/OsmAnd-resources">OsmAnd routing data</a> (GPLv3).
+    <div id="sections" class="sections"></div>
+
+    <p class="footnote">Based on <a href="https://github.com/osmandapp/OsmAnd-resources">OsmAnd routing data</a> (GPLv3).
     <a href="https://github.com/TheRealNepomuk/routing-profile-creator">Source code</a>.<br>
     Not affiliated with or endorsed by OsmAnd B.V.</p>
   </main>
 
   <div class="dock glass">
-    <button class="btn-primary" id="downloadBtn" type="button">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Download XML file
+    <button class="btn-primary" id="saveBtn" type="button">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 13v6h14v-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Save &amp; share
     </button>
   </div>
 
@@ -73,6 +63,18 @@
   <section class="sheet glass" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
     <div class="grabber" aria-hidden="true"></div>
     <h2 id="sheetTitle">Finish in OsmAnd</h2>
+    <div id="saveView" class="save-view" hidden>
+      <label class="f-label" for="profileName">Profile name</label>
+      <input class="text" id="profileName" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="">
+      <p class="hint">Shown in OsmAnd's Navigation type list.</p>
+      <button class="btn-primary" id="downloadBtn" type="button">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download XML file
+      </button>
+      <button class="btn-secondary" id="linkBtn" type="button">Copy share link</button>
+      <div class="save-status" id="saveStatus" role="status"></div>
+      <p class="hint">Your settings are saved inside the file and the link. Open either one here to edit them again.</p>
+    </div>
     <div id="sheetBody"></div>
     <button class="btn-primary" id="sheetClose" type="button">Done</button>
   </section>

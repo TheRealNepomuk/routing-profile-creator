@@ -235,11 +235,42 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
   font: 500 13px var(--font); cursor: pointer; white-space: nowrap;
 }
 
-.name-panel { padding: 6px 18px 16px; }
-.name-panel .text { margin-top: 0; }
-.name-panel .hint { margin-top: 10px; }
-.share-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
-.share-row .btn-secondary { flex: 1 1 140px; padding: 0 12px; }
+/* ---------- top buttons, save sheet, coffee ---------- */
+.intro-btns { display: flex; flex-wrap: wrap; gap: 0 8px; }
+
+.save-view { display: flex; flex-direction: column; }
+.save-view[hidden] { display: none; }
+.save-view .text { margin-top: 8px; }
+.save-view .hint { margin: 6px 2px 18px; }
+.save-view .btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; flex: none; }
+.save-view .btn-secondary { margin-top: 10px; }
+.save-view > .hint:last-child { margin: 14px 2px 18px; }
+.save-status:empty { display: none; }
+.save-status { margin-top: 12px; font-size: 15px; color: var(--ink); }
+.save-status .text { margin-top: 8px; font-size: 15px; }
+.sheet .sheet-close {
+  width: 100%; margin-top: 0;
+  border-color: var(--glass-edge); background: rgba(255, 255, 255, 0.05); color: var(--ink-2);
+}
+.sheet .sheet-close:hover { background: rgba(255, 255, 255, 0.1); }
+
+.coffee {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 18px; padding: 12px 14px;
+  border-radius: var(--r-field); border: 1px solid var(--glass-edge);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px; color: var(--ink-2);
+}
+.coffee-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 40px; padding: 0 16px;
+  border-radius: 999px; border: 1px solid rgba(255, 221, 0, 0.45);
+  background: rgba(255, 221, 0, 0.12);
+  color: #ffe45c; font: 600 15px var(--font); text-decoration: none;
+  transition: background .12s, transform .12s;
+}
+.coffee-btn:hover { background: rgba(255, 221, 0, 0.2); }
+.coffee-btn:active { transform: scale(0.97); }
 
 /* ---------- range slider ---------- */
 .range {
