@@ -36,8 +36,14 @@
       <h1>Routing Profile Creator</h1>
       <p>Custom routing profiles for OsmAnd</p>
       <div class="intro-btns">
-        <button class="btn-secondary" id="helpBtn" type="button">How does this work?</button>
-        <button class="btn-secondary" id="openBtn" type="button">Open a profile file</button>
+        <button class="btn-secondary btn-help" id="helpBtn" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.8v.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="currentColor"/></svg>
+          How does this work?
+        </button>
+        <button class="btn-secondary btn-tool" id="openBtn" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3.5 7.5v10a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 19 8h-7l-2-2.5H5A1.5 1.5 0 0 0 3.5 7v.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Open a profile file
+        </button>
         <input id="openFile" type="file" accept=".xml,application/xml,text/xml" hidden>
       </div>
     </section>
