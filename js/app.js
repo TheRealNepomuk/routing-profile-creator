@@ -10,7 +10,6 @@ const el = {
   help: $("helpBtn"),
 };
 
-const VEHICLE = "motorcycle";
 let template = null;
 let defaults = {};
 const values = {};
@@ -285,7 +284,7 @@ function download() {
   const name = el.name.value.trim() || autoName(values, defaults);
   let xml;
   try {
-    xml = buildOsmandXml({ name, vehicle: VEHICLE, values }, template);
+    xml = buildOsmandXml({ name, values }, template);
   } catch (err) {
     el.status.textContent = "Couldn't create the file: " + err.message;
     return;

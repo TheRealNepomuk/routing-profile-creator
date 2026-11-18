@@ -200,6 +200,8 @@ export const SECTIONS = [
         title: "Access", collapsed: true,
         info: PRIO_INFO,
         fields: [
+          { id: "motorcycle", label: "Motorcycle rules", control: "toggle", target: { kind: "custom" },
+            info: "Follows the OSM tags meant for motorcycles. They come before the car tags, so motorcycle=yes wins over motorcar=no.\n\n- Roads: motorcycle=no / private / agricultural are closed, motorcycle=yes / designated / destination are open.\n- One-ways: oneway:motorcycle is followed, e.g. where motorcycles may ride both ways.\n- Motorcycle lanes (motorcycle=designated) aren't avoided like service roads.\n- Barriers: motorcycle=yes lets you through, motorcycle=no blocks." },
           prio("access_limited", ACCESS_LIMITED, { label: "Private / destination only", info: "Roads you may only use to reach a place on them (private, destination, delivery, customers)." }),
           prio("reversible", [["oneway", "reversible"]], { label: "Reversible one-way", info: "Lanes whose direction changes during the day (oneway=reversible)." }),
         ],
@@ -302,10 +304,12 @@ export const flatFields = (fields) => fields.flatMap((f) => (f.card ? flatFields
 export const ALL_FIELDS = SECTIONS.flatMap((s) => s.groups.flatMap((g) => flatFields(g.fields)));
 
 // Profile name from the biggest changes, e.g. "Max 110 +Secondary −Motorway −Gravel".
+// "Moto" first when the motorcycle rules are on.
 // + = preferred more than OsmAnd does, − = less (or not allowed). Kept within 40 characters.
 const ROW_CARDS = SECTIONS.flatMap((s) => s.groups.flatMap((g) => g.fields.filter((f) => f.card && f.id !== "card_all")));
 export function autoName(values, defaults) {
   const parts = [];
+  if (values.motorcycle) parts.push({ w: 100, t: "Moto" });
   if (values.maxSpeed !== defaults.maxSpeed) parts.push({ w: 99, t: `Max ${values.maxSpeed}` });
   for (const c of ROW_CARDS) {
     const allow = c.fields.find((f) => f.id.startsWith("allow_"));
@@ -321,8 +325,9 @@ export function autoName(values, defaults) {
   parts.sort((a, b) => b.w - a.w);
   const picked = [];
   for (const p of parts) if ([...picked, p].map((x) => x.t).join(" ").length <= 40) picked.push(p);
-  const rank = (t) => (t.startsWith("Max") ? 0 : t.startsWith("+") ? 1 : t.startsWith("−") ? 2 : 3);
+  const rank = (t) => (t === "Moto" ? -1 : t.startsWith("Max") ? 0 : t.startsWith("+") ? 1 : t.startsWith("−") ? 2 : 3);
   picked.sort((a, b) => rank(a.t) - rank(b.t) || b.w - a.w);
+  if (picked.length === 1 && picked[0].t === "Moto") return "Motorcycle (OsmAnd car values)";
   return picked.map((x) => x.t).join(" ") || "Car (OsmAnd default)";
 }
 

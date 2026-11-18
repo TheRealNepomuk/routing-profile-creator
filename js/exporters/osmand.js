@@ -77,7 +77,8 @@ const describe = (t) => t.kind === "attr" ? t.attr : t.kind === "attrChild" ? t.
     : t.pairs.map(([a, b]) => `${a ?? "*"}=${b ?? "*"}`).join(", "));
 
 /**
- * @param {{name:string, vehicle:"motorcycle"|"car", values:Object<string, number|boolean>}} s
+ * @param {{name:string, values:Object<string, number|boolean>, code?:string}} s
+ *   code: settings code written into the header (see js/code.js)
  * @param {string} templateText
  * @param {{DOMParser: typeof DOMParser, XMLSerializer: typeof XMLSerializer}} [dom]
  */
@@ -178,12 +179,16 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
   }
 
   // --- 2. vehicle-specific rules ---
-  // The car profile serves car, truck and motorcycle via <if param="profile_…"> blocks.
-  // A custom profile is its own "Navigation type", so make the chosen vehicle's rules
-  // unconditional and stop offering derived profiles.
+  // The car profile serves car, truck and motorcycle via <if param="profile_…"> blocks, offered
+  // as extra Navigation types through derivedProfiles. The file offers only the plain profile
+  // (one predictable entry in OsmAnd); the "Motorcycle rules" setting makes the motorcycle
+  // blocks unconditional. Truck blocks stay as they are, i.e. inactive.
   const derived = children(profile).find((e) => e.nodeName === "attribute" && e.getAttribute("name") === "derivedProfiles");
-  if (derived) derived.setAttribute("value", "default");
-  if (s.vehicle === "motorcycle") {
+  if (derived && derived.getAttribute("value") !== "default") {
+    changes.push(`derivedProfiles: ${derived.getAttribute("value")} -> default (one Navigation type, no truck/motorcycle variants)`);
+    derived.setAttribute("value", "default");
+  }
+  if (s.values.motorcycle) {
     const n = unwrapIfs(profile, "profile_motorcycle");
     changes.push(`motorcycle rules always active (${n} blocks: motorcycle=*, oneway:motorcycle, …)`);
   }
