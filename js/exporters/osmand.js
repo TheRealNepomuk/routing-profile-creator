@@ -198,7 +198,8 @@ export function buildOsmandXml(s, templateText, dom = globalThis) {
   const header = doc.createComment(
     `\n  ${safeName}\n  Created with Routing Profile Creator (https://therealnepomuk.github.io/routing-profile-creator/)\n` +
     `  Based on the OsmAnd car profile (GPLv3, OsmAnd B.V.), source noted in the template below.\n` +
-    `  Changes from the original car profile:\n` + changes.map((c) => `    - ${c}`).join("\n") + "\n");
+    `  Changes from the original car profile:\n` + changes.map((c) => `    - ${c}`).join("\n") + "\n" +
+    (s.code ? `  Settings code (open this file on the page to edit it again):\n  ${s.code}\n` : ""));
   doc.insertBefore(header, doc.firstChild);
 
   let out = new dom.XMLSerializer().serializeToString(doc);

@@ -45,6 +45,12 @@
         <span class="f-label">Profile name</span>
       </label>
       <input class="text" id="profileName" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="">
+      <p class="hint">Your settings are saved inside every file you download. Open one here to edit it again, or share your settings as a link.</p>
+      <div class="share-row">
+        <button class="btn-secondary" id="openBtn" type="button">Open a profile file</button>
+        <button class="btn-secondary" id="linkBtn" type="button">Copy share link</button>
+        <input id="openFile" type="file" accept=".xml,application/xml,text/xml" hidden>
+      </div>
     </section>
 
     <p class="status" id="status" role="status"></p>

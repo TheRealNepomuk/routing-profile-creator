@@ -1,13 +1,14 @@
 // Routing Profile Creator — page logic
 import { SECTIONS, ALL_FIELDS, flatFields, autoName, fileNameFor } from "./settings.js";
 import { buildOsmandXml, readDefaults, TEMPLATE_URL } from "./exporters/osmand.js";
+import { encodeSettings, decodeSettings, findCode } from "./code.js";
 
 const $ = (id) => document.getElementById(id);
 const el = {
   sections: $("sections"), name: $("profileName"),
   download: $("downloadBtn"), status: $("status"),
   sheet: $("sheet"), scrim: $("scrim"), sheetTitle: $("sheetTitle"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
-  help: $("helpBtn"),
+  help: $("helpBtn"), open: $("openBtn"), openFile: $("openFile"), link: $("linkBtn"),
 };
 
 let template = null;
@@ -172,6 +173,7 @@ function updateSummaries() {
   }
   updateRelations();
   if (!nameEdited) el.name.value = autoName(values, defaults);
+  syncUrl();
 }
 
 function refreshAll() {
@@ -217,7 +219,7 @@ function bind() {
       updateSummaries();
     }
   });
-  el.name.addEventListener("input", () => { nameEdited = el.name.value.trim() !== ""; });
+  el.name.addEventListener("input", () => { nameEdited = el.name.value.trim() !== ""; syncUrl(); });
 }
 
 // ---------- platform & instructions ----------
@@ -284,7 +286,8 @@ function download() {
   const name = el.name.value.trim() || autoName(values, defaults);
   let xml;
   try {
-    xml = buildOsmandXml({ name, values }, template);
+    // Always write a code, even an empty one, so the file can be opened here again.
+    xml = buildOsmandXml({ name, values, code: currentCode() || "rpc1:" }, template);
   } catch (err) {
     el.status.textContent = "Couldn't create the file: " + err.message;
     return;
@@ -301,6 +304,73 @@ function download() {
   openSheet("Finish in OsmAnd", INSTRUCTIONS[platform()](name, fileName));
 }
 el.download.addEventListener("click", download);
+
+// ---------- settings code: URL, open a file, share link ----------
+// The current settings live in the URL (#rpc1:…), so a reload keeps them and the address is
+// the share link. Downloaded files carry the same code in their header comment.
+const currentCode = () => encodeSettings(values, defaults, nameEdited ? el.name.value.trim() : null);
+
+// Some apps encode the ":" when passing a link on.
+const hashCode = () => findCode(location.hash.replace(/^#rpc1%3A/i, "#rpc1:"));
+
+function syncUrl() {
+  if (!template) return;
+  const code = currentCode();
+  history.replaceState(null, "", code ? "#" + code : location.pathname + location.search);
+}
+
+let statusTimer = 0;
+function say(msg, stay = false) {
+  clearTimeout(statusTimer);
+  el.status.textContent = msg;
+  if (!stay) statusTimer = setTimeout(() => { el.status.textContent = ""; }, 8000);
+}
+
+/** Replaces all settings with the ones in the code. Returns false if it can't be read. */
+function applyCode(code, from) {
+  let s;
+  try { s = decodeSettings(code); } catch { return false; }
+  for (const f of ALL_FIELDS) values[f.id] = f.id in s.values ? s.values[f.id] : defaults[f.id];
+  nameEdited = !!s.name;
+  if (s.name) el.name.value = s.name;
+  refreshAll();
+  const n = Object.keys(s.values).length;
+  say((n ? `Loaded ${n} changed setting${n === 1 ? "" : "s"} from ${from}.` : `Loaded ${from}: all OsmAnd defaults.`)
+    + (s.skipped.length ? ` ${s.skipped.length} unknown entr${s.skipped.length === 1 ? "y was" : "ies were"} skipped.` : ""));
+  return true;
+}
+
+el.open.addEventListener("click", () => el.openFile.click());
+el.openFile.addEventListener("change", async () => {
+  const file = el.openFile.files[0];
+  el.openFile.value = ""; // so the same file can be picked again
+  if (!file || !template) return;
+  let text;
+  try { text = await file.text(); } catch { say("Couldn't read that file."); return; }
+  const code = findCode(text);
+  if (!code || !applyCode(code, file.name)) {
+    say(`${file.name} has no settings code. Only files made with this page since November 2026 can be opened again.`);
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+el.link.addEventListener("click", async () => {
+  syncUrl();
+  const url = location.href;
+  try {
+    await navigator.clipboard.writeText(url);
+    say(currentCode() ? "Link copied. Whoever opens it gets your settings." : "Link copied. You haven't changed anything yet, so it opens the OsmAnd defaults.");
+  } catch {
+    openSheet("Share link", `<p class="lead">Copy this link to share your settings:</p>
+      <input class="text" type="text" readonly value="${esc(url)}" onfocus="this.select()">`);
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  const code = hashCode();
+  if (code && template && code !== currentCode()) applyCode(code, "the link");
+});
 
 // ---------- help ----------
 const HELP = `
@@ -354,8 +424,9 @@ fetch(TEMPLATE_URL)
     template = t;
     defaults = readDefaults(t);
     for (const f of ALL_FIELDS) values[f.id] = f.start !== undefined ? f.start : defaults[f.id];
-    refreshAll();
-    el.download.disabled = false;
     el.status.textContent = "";
+    const code = hashCode();
+    if (!(code && applyCode(code, "the link"))) refreshAll();
+    el.download.disabled = false;
   })
   .catch((err) => { el.status.textContent = "Couldn't load OsmAnd's base profile (" + err.message + "). Check your connection and reload the page."; });

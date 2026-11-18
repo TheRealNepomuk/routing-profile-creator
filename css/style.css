@@ -237,6 +237,9 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
 
 .name-panel { padding: 6px 18px 16px; }
 .name-panel .text { margin-top: 0; }
+.name-panel .hint { margin-top: 10px; }
+.share-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.share-row .btn-secondary { flex: 1 1 140px; padding: 0 12px; }
 
 /* ---------- range slider ---------- */
 .range {
