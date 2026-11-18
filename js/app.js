@@ -10,6 +10,7 @@ const el = {
   sheet: $("sheet"), scrim: $("scrim"), sheetTitle: $("sheetTitle"), sheetBody: $("sheetBody"), sheetClose: $("sheetClose"),
   help: $("helpBtn"), open: $("openBtn"), openFile: $("openFile"), link: $("linkBtn"),
   save: $("saveBtn"), saveView: $("saveView"), saveStatus: $("saveStatus"),
+  reset: $("resetBtn"), sheetHead: $("sheetHead"), sheetScroll: $("sheetScroll"),
 };
 
 let template = null;
@@ -272,10 +273,11 @@ function showSheet(title, saveMode, closeLabel = saveMode ? "Close" : null) {
   el.sheetBody.hidden = saveMode;
   el.sheetClose.textContent = closeLabel || "Done";
   el.sheetClose.className = closeLabel ? "btn-secondary sheet-close" : "btn-primary";
-  if (el.sheet.hidden) lastFocus = document.activeElement;
+  if (el.sheet.hidden) { lastFocus = document.activeElement; lockPage(); }
+  el.sheetScroll.scrollTop = 0;
   el.scrim.hidden = false;
   el.sheet.hidden = false;
-  el.sheetClose.focus();
+  el.sheetClose.focus({ preventScroll: true });
 }
 function openSheet(title, html, closeLabel = null) {
   el.sheetBody.innerHTML = html;
@@ -288,11 +290,67 @@ function openSave() {
 }
 el.save.addEventListener("click", openSave);
 function closeSheet() {
+  if (el.sheet.hidden) return;
   el.sheet.hidden = true;
   el.scrim.hidden = true;
-  if (lastFocus) lastFocus.focus();
+  el.sheet.classList.remove("settling");
+  el.sheet.style.removeProperty("--drag");
+  unlockPage();
+  if (lastFocus) lastFocus.focus({ preventScroll: true });
 }
 el.sheetClose.addEventListener("click", closeSheet);
+
+// While a sheet is open the page behind must not move: on iPhone a swipe on the dark area would
+// otherwise scroll the page and keep the sheet from getting swipes. Pinning the body is the
+// reliable way on iOS (overflow: hidden alone isn't).
+let lockedY = 0;
+function lockPage() {
+  lockedY = window.scrollY;
+  Object.assign(document.body.style, { position: "fixed", top: `-${lockedY}px`, left: "0", right: "0" });
+}
+function unlockPage() {
+  for (const k of ["position", "top", "left", "right"]) document.body.style.removeProperty(k);
+  window.scrollTo(0, lockedY);
+}
+
+// Swipe down to close: from the handle/title anywhere, from the content once it's scrolled to the
+// top. Far enough down or a quick flick closes, otherwise the sheet springs back.
+let drag = null;
+el.sheet.addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1) { drag = null; return; }
+  const y = e.touches[0].clientY;
+  drag = { startY: y, lastY: y, lastT: e.timeStamp, v: 0, active: false, head: el.sheetHead.contains(e.target) };
+}, { passive: true });
+el.sheet.addEventListener("touchmove", (e) => {
+  if (!drag) return;
+  const y = e.touches[0].clientY, dy = y - drag.startY;
+  if (!drag.active) {
+    if (dy > 6 && (drag.head || el.sheetScroll.scrollTop <= 0)) {
+      drag.active = true;
+      drag.startY = y - 1; // start following from here, no jump
+      el.sheet.classList.remove("settling");
+    } else return; // normal scrolling of the content
+  }
+  e.preventDefault();
+  const dt = Math.max(1, e.timeStamp - drag.lastT);
+  drag.v = (y - drag.lastY) / dt; // px per ms, positive = downwards
+  drag.lastY = y; drag.lastT = e.timeStamp;
+  el.sheet.style.setProperty("--drag", Math.max(0, y - drag.startY) + "px");
+}, { passive: false });
+const endDrag = () => {
+  if (!drag || !drag.active) { drag = null; return; }
+  const pulled = Math.max(0, drag.lastY - drag.startY), flick = drag.v > 0.5 && pulled > 30;
+  drag = null;
+  el.sheet.classList.add("settling");
+  if (pulled > Math.min(140, el.sheet.offsetHeight * 0.3) || flick) {
+    el.sheet.style.setProperty("--drag", el.sheet.offsetHeight + "px");
+    setTimeout(closeSheet, 200);
+  } else {
+    el.sheet.style.setProperty("--drag", "0px");
+  }
+};
+el.sheet.addEventListener("touchend", endDrag);
+el.sheet.addEventListener("touchcancel", endDrag);
 el.scrim.addEventListener("click", closeSheet);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !el.sheet.hidden) closeSheet(); });
 
@@ -407,6 +465,24 @@ el.link.addEventListener("click", async () => {
 window.addEventListener("hashchange", () => {
   const code = hashCode();
   if (code && template && code !== currentCode()) applyCode(code, "the link");
+});
+
+// ---------- reset ----------
+const RESET_INFO = `
+  <p class="lead">Every value goes back to OsmAnd's car profile, and the profile name is built again. This can't be undone.</p>
+  <button class="btn-primary sheet-action" id="resetConfirm" type="button">Reset all settings</button>`;
+el.reset.addEventListener("click", () => {
+  if (!template) return;
+  if (!currentCode()) { say("Nothing to reset: everything is at OsmAnd's defaults."); return; }
+  openSheet("Reset all settings?", RESET_INFO, "Cancel");
+});
+el.sheetBody.addEventListener("click", (e) => {
+  if (!e.target.closest("#resetConfirm")) return;
+  for (const f of ALL_FIELDS) values[f.id] = defaults[f.id];
+  nameEdited = false;
+  refreshAll();
+  closeSheet();
+  say("All settings are back to OsmAnd's defaults.");
 });
 
 // ---------- contact ----------
