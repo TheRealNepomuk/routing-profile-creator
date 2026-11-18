@@ -265,21 +265,21 @@ const INSTRUCTIONS = {
 // ---------- sheet ----------
 // One sheet, two uses: "Save & share" (name, download, link) and text pages (instructions, help).
 let lastFocus = null;
-function showSheet(title, saveMode) {
+// closeLabel: when the sheet has its own orange button, closing becomes the quiet grey action.
+function showSheet(title, saveMode, closeLabel = saveMode ? "Close" : null) {
   el.sheetTitle.textContent = title;
   el.saveView.hidden = !saveMode;
   el.sheetBody.hidden = saveMode;
-  // In the save view the orange button is Download, so closing is the quiet secondary action.
-  el.sheetClose.textContent = saveMode ? "Close" : "Done";
-  el.sheetClose.className = saveMode ? "btn-secondary sheet-close" : "btn-primary";
+  el.sheetClose.textContent = closeLabel || "Done";
+  el.sheetClose.className = closeLabel ? "btn-secondary sheet-close" : "btn-primary";
   if (el.sheet.hidden) lastFocus = document.activeElement;
   el.scrim.hidden = false;
   el.sheet.hidden = false;
   el.sheetClose.focus();
 }
-function openSheet(title, html) {
+function openSheet(title, html, closeLabel = null) {
   el.sheetBody.innerHTML = html;
-  showSheet(title, false);
+  showSheet(title, false, closeLabel);
 }
 function openSave() {
   if (!template) return;
@@ -364,7 +364,20 @@ function applyCode(code, from) {
   return true;
 }
 
-el.open.addEventListener("click", () => el.openFile.click());
+// Explain first what can be opened, then pick the file (the picker opens inside this tap).
+const OPEN_INFO = `
+  <p class="lead">Pick a routing file you downloaded from this page. All its settings come back, ready to change.</p>
+  <p class="note">For now this only works with files made with Routing Profile Creator, because they carry your settings inside. OsmAnd's own routing files and other custom profiles can't be opened yet.</p>
+  <button class="btn-primary sheet-action" id="pickFile" type="button">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3.5 7.5v10a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 19 8h-7l-2-2.5H5A1.5 1.5 0 0 0 3.5 7v.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    Choose a file
+  </button>`;
+el.open.addEventListener("click", () => openSheet("Open a profile file", OPEN_INFO, "Cancel"));
+el.sheetBody.addEventListener("click", (e) => {
+  if (!e.target.closest("#pickFile")) return;
+  closeSheet();
+  el.openFile.click();
+});
 el.openFile.addEventListener("change", async () => {
   const file = el.openFile.files[0];
   el.openFile.value = ""; // so the same file can be picked again

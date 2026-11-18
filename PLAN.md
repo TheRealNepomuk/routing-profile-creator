@@ -81,6 +81,16 @@
     profile file" restores it). Not in the file/profile name: OsmAnd shows that name, and it has
     length limits. Files made before 2026-11-18 have no code.
   - GPLv3 `LICENSE` added.
+- **2026-11-18, layout round:** bottom button is now **"Save & share"** (sheet with profile name,
+  Download XML file, Copy share link; after a download it shows the OsmAnd steps). **"Open a profile
+  file"** moved to the top: opening is how you start, saving/sharing how you finish. Button levels:
+  orange = Save & share only, solid blue = help, glass = Open. **Buy Me a Coffee** link
+  (buymeacoffee.com/therealnepomuk) at the end of the "Finish in OsmAnd" steps, cup logo from the
+  BMC brand kit recoloured white (`assets/bmc-cup.svg`). Both sections start closed.
+- **Later: open files without a settings code.** The page knows where each value sits in the car
+  profile (that's how it reads the defaults), so it could read values straight from any car-based
+  profile (e.g. the private `Motorcycle_90kph_v2.xml`). Extras the page doesn't model would be lost
+  on re-export, so it must say so. Not for bicycle/pedestrian/BRouter files. About an hour.
 - **Correction:** the comment in `routing.xml` says switching road type costs the difference one way
   only; the code check (2026-11-14, see `js/settings.js`) says |a − b| / 2 seconds in both
   directions. The code is what counts.
