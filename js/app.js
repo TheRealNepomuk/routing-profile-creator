@@ -225,9 +225,12 @@ function bind() {
 }
 
 // ---------- platform & instructions ----------
+// Opened from the home-screen icon (web app) instead of the browser.
+const standalone = () => navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+
 function platform() {
   const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return standalone() ? "iosApp" : "ios";
   if (/Android/.test(ua)) return "android";
   return "desktop";
 }
@@ -247,6 +250,16 @@ const INSTRUCTIONS = {
     <p class="note"><b>OsmAnd doesn't confirm the import.</b> No message is normal, the profile was still added.
     If it's not in the list, fully close OsmAnd (swipe it away) and open it again.</p>
     <p class="small">Can't find the download? Open the <b>Files</b> app → <b>Downloads</b>.</p>`,
+  // Home-screen version: iOS opens the downloaded file right away, with a share button.
+  iosApp: (name, file) => `
+    <p class="lead"><b>${esc(file)}</b> opens right away. Now hand it to OsmAnd.</p>
+    <ol class="steps">
+      <li>In the file preview, tap <b>Share</b> and choose <b>OsmAnd</b>.</li>
+      ${selectStep(name)}
+      <li>Your switches are under <b>Route parameters → Avoid roads…</b></li>
+    </ol>
+    <p class="note"><b>OsmAnd doesn't confirm the import.</b> No message is normal, the profile was still added.
+    If it's not in the list, fully close OsmAnd (swipe it away) and open it again.</p>`,
   android: (name, file) => `
     <p class="lead"><b>${esc(file)}</b> is in your Downloads. Now hand it to OsmAnd.</p>
     <ol class="steps">
@@ -466,6 +479,22 @@ window.addEventListener("hashchange", () => {
   const code = hashCode();
   if (code && template && code !== currentCode()) applyCode(code, "the link");
 });
+
+// ---------- home screen tip ----------
+// iPhone in the browser only: the home-screen version is the better way to use the page (the file
+// opens straight in the share menu instead of going to Downloads). Hidden for good once dismissed.
+const TIP_KEY = "rpc.a2hsHidden";
+(() => {
+  let hidden = false;
+  try { hidden = localStorage.getItem(TIP_KEY) === "1"; } catch { /* storage blocked: show it */ }
+  if (platform() !== "ios" || hidden) return;
+  const tip = $("a2hs");
+  tip.hidden = false;
+  $("a2hsClose").addEventListener("click", () => {
+    tip.hidden = true;
+    try { localStorage.setItem(TIP_KEY, "1"); } catch { /* not remembered, fine */ }
+  });
+})();
 
 // ---------- reset ----------
 const RESET_INFO = `

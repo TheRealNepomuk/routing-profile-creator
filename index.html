@@ -7,6 +7,10 @@
   <meta name="color-scheme" content="dark">
   <title>Routing Profile Creator</title>
   <meta name="description" content="Create a custom routing profile for OsmAnd on your phone and send it straight to the app.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+  <meta name="apple-mobile-web-app-title" content="RP Creator">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -52,6 +56,15 @@
         <input id="openFile" type="file" accept=".xml,application/xml,text/xml" hidden>
       </div>
     </section>
+
+    <!-- iPhone Safari only (js/app.js): the home-screen version hands the file straight to the share menu -->
+    <div class="a2hs" id="a2hs" hidden>
+      <p><b>Works best from your Home Screen:</b> downloaded files open straight in the share menu.
+      Tap Share <svg class="a2hs-share" viewBox="0 0 24 24" width="16" height="16" aria-label="(the share icon)"><path d="M12 15V4m0 0L8 8m4-4 4 4M6 11v8h12v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> → <b>Add to Home Screen</b>.</p>
+      <button class="a2hs-x" id="a2hsClose" type="button" aria-label="Hide this tip">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
 
     <p class="status" id="status" role="status"></p>
 

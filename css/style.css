@@ -235,6 +235,26 @@ details.group > summary .chev { width: 7px; height: 7px; margin-left: 4px; }
   font: 500 13px var(--font); cursor: pointer; white-space: nowrap;
 }
 
+/* ---------- home screen tip (iPhone browser only) ---------- */
+.a2hs[hidden] { display: none; }
+.a2hs {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 8px 12px 16px;
+  border-radius: var(--r-field);
+  border: 1px solid rgba(10, 132, 255, 0.4);
+  background: rgba(10, 132, 255, 0.12);
+  font-size: 14px; line-height: 1.45; color: var(--ink-2);
+}
+.a2hs p { margin: 0; flex: 1; }
+.a2hs b { color: var(--ink); font-weight: 600; }
+.a2hs-share { vertical-align: -3px; color: #4da3ff; }
+.a2hs-x {
+  flex: none; display: grid; place-items: center;
+  width: 32px; height: 32px; margin: -4px 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--ink-2); cursor: pointer;
+}
+.a2hs-x:hover { background: rgba(255, 255, 255, 0.08); }
+
 /* ---------- top buttons, save sheet, coffee ---------- */
 .intro-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .intro-top h1 { flex: 1; }
