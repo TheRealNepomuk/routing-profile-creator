@@ -1,6 +1,6 @@
 # Plan — Routing Profile Creator
 
-**Status:** beta, close to v1, updated 2026-11-18
+**Status:** v1 live, updated 2026-11-18 (end of session)
 
 **Name:** Routing Profile Creator — *Custom routing profiles for OsmAnd*
 **Repo:** https://github.com/TheRealNepomuk/routing-profile-creator (public) · **Hosting:** GitHub Pages ·
@@ -91,16 +91,50 @@
   profile (that's how it reads the defaults), so it could read values straight from any car-based
   profile (e.g. the private `Motorcycle_90kph_v2.xml`). Extras the page doesn't model would be lost
   on re-export, so it must say so. Not for bicycle/pedestrian/BRouter files. About an hour.
+- **2026-11-18, phone round** (after testing on the iPhone 17):
+  - **Sheets:** while one is open the page behind is pinned (on iPhone a swipe on the dark area used to
+    scroll the page and steal the sheet's touches, Done became unreachable). Sheet = head (handle +
+    title, takes the swipe), scrolling middle (`overscroll-behavior: contain`), pinned foot with
+    Done/Close. **Swipe down to close** from the head, or from the content when scrolled to the top;
+    far enough or a quick flick closes, else it springs back.
+  - **Header:** help is a round blue **?** (58 px) next to the title; **"Open a file"** and the new
+    **"Reset all"** (asks first, can't be undone) share one row. Two pills with long labels didn't fit
+    at 402 px. "Open a file" first shows a sheet: only files made by this page can be opened.
+  - **Contact:** "Contact" (footer) and "Contact me" (help sheet) open a sheet with "Write an email"
+    and "Copy email address" (says "Copied to clipboard."). Duck address (in `js/app.js`, split in
+    two), only assembled on click. Never write it out in full anywhere in this public repo. GitHub's noreply address can't receive mail.
+  - **Home screen:** the iOS home-screen version is *better* for the main flow: the downloaded file
+    opens straight in a preview with Share, instead of going to Downloads. So: app icon (`assets/
+    icon.svg`, PNGs 180/192/512 rendered from it), short name **"RP Creator"**, web app manifest
+    (`display: standalone`), a dismissible tip bar in iPhone Safari only ("Works best from your Home
+    Screen"), and own "Finish in OsmAnd" steps in the home-screen version. No iOS status-bar meta on
+    purpose (keeps the look the user liked). The tip must not be named `a2hs`: ad blockers hide that.
+  - **GoatCounter** (therealnepomuk.goatcounter.com): cookie-free visit counts, sends the path without
+    the `#settings` code, skips localhost. Events without content: `download`, `share-link`,
+    `open-file`, `coffee`. Footer notes it. Blocked by tracker blockers (e.g. the laptop's Chrome), so
+    numbers are a lower bound; the page works unchanged when the script is blocked.
+  - **Line breaks** checked at 360/375/402 px: footer as separate lines, section summary under the
+    title, card titles on one line, `text-wrap: pretty` for texts, `balance` for headings, key phrases
+    kept together (`.nw`).
+  - **Repo privacy review** (all commits, both branches, deleted files, PNG metadata): no secrets,
+    no personal email or paths; commits use the GitHub noreply address. Only the *filename* of the
+    private profile appears (here), accepted. Old branch `claude/adoring-heisenberg-nsocvq` (fully in
+    `main`) deleted on GitHub.
 - **Correction:** the comment in `routing.xml` says switching road type costs the difference one way
   only; the code check (2026-11-14, see `js/settings.js`) says |a − b| / 2 seconds in both
   directions. The code is what counts.
 
 ## Before promoting (needs the phone)
 
+- [x] iPhone: build a profile on the page and hand it to OsmAnd; it imports and works (2026-11-18,
+      home-screen version)
+- [x] iPhone: home-screen icon and name, no tip bar in the home-screen version, "opens right away"
+      steps; tip bar shows in Safari after the rename; GoatCounter counts the phone (2026-11-18)
 - [ ] Import a file with Motorcycle rules on, check `motorcycle=*` roads and barriers behave
 - [ ] Re-import a file with the same name: replaces the profile or adds a second one? → instructions
-- [ ] Android: download and import
+- [ ] Android: download and import (and the Chrome "Install app" prompt)
 - [ ] iPhone: "Copy share link", open the link in Safari, settings come back
+- [ ] Swipe-to-close and the pinned Done button with a real finger (only simulated on the laptop)
 
 ## Later: how far should this go?
 
