@@ -4,6 +4,12 @@ import { buildOsmandXml, readDefaults, TEMPLATE_URL } from "./exporters/osmand.j
 import { encodeSettings, decodeSettings, findCode } from "./code.js";
 
 const $ = (id) => document.getElementById(id);
+
+// Anonymous usage counts (GoatCounter, script in index.html). Only the event name is sent, never
+// settings or names. Silently does nothing if the script is blocked or not loaded yet.
+function track(event) {
+  try { window.goatcounter?.count?.({ path: event, title: event, event: true }); } catch { /* ignore */ }
+}
 const el = {
   sections: $("sections"), name: $("profileName"),
   download: $("downloadBtn"), status: $("status"),
@@ -384,6 +390,7 @@ function download() {
   const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
+  track("download");
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -394,7 +401,7 @@ function download() {
 const COFFEE = `
   <div class="coffee">
     <span>Useful? Support the project:</span>
-    <a class="coffee-btn" href="https://buymeacoffee.com/therealnepomuk" target="_blank" rel="noopener">
+    <a class="coffee-btn" href="https://buymeacoffee.com/therealnepomuk" target="_blank" rel="noopener" data-track="coffee">
       <img src="assets/bmc-cup.svg" alt="" width="15" height="22"> Buy me a coffee
     </a>
   </div>`;
@@ -460,10 +467,12 @@ el.openFile.addEventListener("change", async () => {
     say(`${file.name} has no settings code. Only files made with this page since November 2026 can be opened again.`);
     return;
   }
+  track("open-file");
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 el.link.addEventListener("click", async () => {
+  track("share-link");
   syncUrl();
   const url = location.href;
   try {
@@ -512,6 +521,11 @@ el.sheetBody.addEventListener("click", (e) => {
   refreshAll();
   closeSheet();
   say("All settings are back to OsmAnd's defaults.");
+});
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-track]");
+  if (t) track(t.dataset.track);
 });
 
 // ---------- contact ----------
